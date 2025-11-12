@@ -1,0 +1,384 @@
+.slide-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.slide-modal-layout {
+  background: white;
+  border-radius: 12px;
+  width: 90%;
+  max-width: 800px;
+  max-height: 95vh;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+}
+
+.slide-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 24px;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.slide-modal-header h2 {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #333;
+}
+
+.slide-modal-close {
+  background: none;
+  border: none;
+  font-size: 24px;
+  cursor: pointer;
+  color: #666;
+  padding: 0;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: background-color 0.2s ease;
+}
+
+.slide-modal-close:hover {
+  background-color: #f0f0f0;
+  color: #333;
+}
+
+.slide-modal-form {
+  padding: 16px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.slide-form-row {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+
+.slide-form-row-inline {
+  display: flex;
+  flex-direction: row;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.slide-form-row-inline-label {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.slide-form-row-inline-label label {
+  min-width: 100px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: #333;
+  text-align: left;
+  flex-shrink: 0;
+}
+
+.slide-form-row-inline-label input,
+.slide-form-row-inline-label select {
+  flex: 1;
+  padding: 10px 14px;
+  border: 1px solid #d0d0d0;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  background-color: #f8f9fa;
+  transition: border-color 0.2s ease;
+}
+
+.slide-form-row-inline-label input:focus,
+.slide-form-row-inline-label select:focus {
+  outline: none;
+  border-color: #acc4ff;
+  background-color: white;
+}
+
+.slide-form-field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex: 1;
+}
+
+.slide-form-row label {
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: #333;
+}
+
+.slide-form-row input,
+.slide-form-row select,
+.slide-form-field input,
+.slide-form-field select {
+  padding: 10px 14px;
+  border: 1px solid #d0d0d0;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  background-color: #f8f9fa;
+  transition: border-color 0.2s ease;
+}
+
+.slide-form-row input:focus,
+.slide-form-row select:focus,
+.slide-form-field input:focus,
+.slide-form-field select:focus {
+  outline: none;
+  border-color: #acc4ff;
+  background-color: white;
+}
+
+.color-picker-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1;
+}
+
+.color-picker-circle {
+  width: 45px;
+  height: 45px;
+  border-radius: 50%;
+  border: 2px solid #d0d0d0;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  flex-shrink: 0;
+}
+
+.color-picker-circle:hover {
+  transform: scale(1.1);
+  border-color: #acc4ff;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+.color-code-display {
+  font-size: 0.85rem;
+  color: #666;
+  font-family: monospace;
+  padding: 4px 8px;
+  background: #f0f0f0;
+  border-radius: 4px;
+  min-width: 70px;
+  text-align: center;
+}
+
+.color-input-hidden {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+}
+
+.slide-image-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.slide-image-section label {
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: #333;
+}
+
+.slide-image-upload-area {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 9; /* 16:9 비율 유지 */
+  border: 2px dashed #d0d0d0;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f8f9fa;
+  overflow: hidden;
+}
+
+.slide-upload-btn {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%; /* 정확한 원 모양 */
+  background: transparent;
+  color: #333;
+  border: 2px solid #333;
+  font-size: 32px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  padding: 0;
+  line-height: 1;
+}
+
+.slide-upload-btn:hover:not(:disabled) {
+  border-color: #666;
+  color: #666;
+  transform: scale(1.1);
+}
+
+.slide-preview-container {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+.slide-preview-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.slide-preview-overlay {
+  position: absolute;
+  top: 70%; /* 하단 30% 위치부터 시작 (더 아래로 이동) */
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.7) 0%, rgba(0, 0, 0, 0.7) 50%, transparent 100%);
+  padding: 24px 20px 20px 20px; /* 상단과 좌우 패딩 */
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+}
+
+.slide-preview-title {
+  margin: 0 0 4px 0;
+  font-size: 1.3rem;
+  font-weight: 700;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.8);
+}
+
+.slide-preview-subtitle {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 400;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.7);
+}
+
+.slide-image-controls {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  display: flex;
+  gap: 8px;
+  z-index: 20;
+}
+
+.slide-change-btn,
+.slide-delete-img-btn {
+  width: 45px;
+  height: 45px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.95);
+  border: 3px solid #667eea;
+  font-size: 20px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.4);
+  color: #333;
+  font-weight: bold;
+  position: relative;
+}
+
+.slide-change-btn:hover,
+.slide-delete-img-btn:hover {
+  background: white;
+  transform: scale(1.2);
+  box-shadow: 0 5px 12px rgba(0, 0, 0, 0.5);
+  z-index: 25;
+}
+
+.slide-delete-img-btn {
+  color: #ff6b6b;
+  border-color: #ff6b6b;
+}
+
+.slide-change-btn {
+  color: #667eea;
+}
+
+/* 이미지 컨트롤 버튼 툴팁 스타일은 title 속성으로 처리 */
+
+.slide-form-submit {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+  margin-top: 20px;
+  padding-top: 20px;
+  border-top: 1px solid #e0e0e0;
+}
+
+.slide-submit-btn {
+  min-width: 120px;
+  background: var(--pastel-primary, #acc4ff);
+  color: #333;
+  border: none;
+  padding: 14px 20px;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.slide-submit-btn:hover:not(:disabled) {
+  background: var(--pastel-primary-hover, #b5c7ed);
+}
+
+.slide-submit-btn:disabled {
+  background: #c0c0c0;
+  cursor: not-allowed;
+}
+
+.slide-cancel-btn {
+  padding: 14px 20px;
+  border: 1px solid #d0d0d0;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  background: white;
+  color: #333;
+}
+
+.slide-cancel-btn:hover:not(:disabled) {
+  background: #f0f0f0;
+  border-color: #b0b0b0;
+}
+
+.slide-cancel-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+

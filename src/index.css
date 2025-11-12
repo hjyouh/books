@@ -1,0 +1,114 @@
+:root {
+  font-family: 'Suite', Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+
+  color-scheme: light only; /* dark 모드 비활성화 */
+  color: #213547;
+  background-color: #ffffff;
+
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+html {
+  background: #ffffff !important; /* HTML 요소에도 흰색 배경 강제 적용 */
+  margin: 0;
+  padding: 0;
+}
+
+a {
+  font-weight: 500;
+  color: #646cff;
+  text-decoration: inherit;
+}
+a:hover {
+  color: #535bf2;
+}
+
+body {
+  margin: 0;
+  display: block; /* flex에서 block으로 변경 */
+  min-width: 320px;
+  min-height: 100vh;
+  background: #ffffff;
+}
+
+h1 {
+  font-size: 3.2em;
+  line-height: 1.1;
+}
+
+/* 헤더 로고 텍스트는 제외 */
+.logo-text h1 {
+  font-size: 16px !important;
+  line-height: 1.2 !important;
+}
+
+.logo-text p {
+  font-size: 16px !important;
+  color: #374151 !important;
+  font-weight: 600 !important;
+  line-height: 1.2 !important;
+}
+
+button {
+  border-radius: 8px;
+  border: 1px solid transparent;
+  padding: 0.6em 1.2em;
+  font-size: 1em;
+  font-weight: 500;
+  font-family: 'Suite', inherit;
+  background-color: transparent; /* 기본 배경색 제거 */
+  color: inherit;
+  cursor: pointer;
+  transition: border-color 0.25s;
+}
+button:hover {
+  border-color: #646cff;
+}
+button:focus,
+button:focus-visible {
+  outline: 4px auto -webkit-focus-ring-color;
+}
+
+@media (prefers-color-scheme: light) {
+  :root {
+    color: #213547;
+    background-color: #ffffff;
+  }
+  a:hover {
+    color: #747bff;
+  }
+  button {
+    background-color: #f9f9f9;
+  }
+}
+
+#root {
+  width: 100%;
+  min-height: 100vh;
+  background: #ffffff !important; /* 명시적으로 흰색 배경 강제 적용 */
+  overflow-x: hidden; /* 가로 스크롤 숨김 */
+}
+
+* {
+  box-sizing: border-box;
+}
+
+/* 검정 바 제거를 위한 추가 스타일 */
+.publishing-website {
+  background: #ffffff !important;
+}
+
+body::after,
+body::before,
+html::after,
+html::before {
+  display: none !important;
+  content: none !important;
+}
+
+

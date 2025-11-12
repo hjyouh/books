@@ -1,0 +1,72 @@
+Firebase 보안 규칙 (Firestore + Storage)
+
+=== Firestore 규칙 ===
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // This rule allows anyone with your Firestore database reference to view, edit,
+    // and delete all data in your Firestore database. It is useful for getting
+    // started, but it is configured to expire after 30 days because it
+    // leaves your app open to attackers. At that time, all client
+    // requests to your Firestore database will be denied.
+    //
+    // Make sure to write security rules for your app before that time, or else
+    // all client requests to your Firestore database will be denied until you Update
+    // your rules
+    match /{document=**} {
+      allow read, write: if request.time < timestamp.date(2025, 10, 23);
+    }
+  }
+}
+
+=== Firebase Storage 규칙 ===
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+    // 개발용: 모든 사용자에게 읽기/쓰기 허용
+    match /{allPaths=**} {
+      allow read, write: if true;
+    }
+    
+    // 또는 인증된 사용자만 허용하려면 아래 규칙 사용:
+    // match /{allPaths=**} {
+    //   allow read, write: if request.auth != null;
+    // }
+  }
+}
+
+=== 설정 방법 ===
+1. Firebase 콘솔 (https://console.firebase.google.com) 접속
+2. 프로젝트 선택 (books-c8450)
+3. 왼쪽 메뉴에서 "Firestore Database" 클릭
+4. "규칙" 탭에서 Firestore 규칙 설정
+5. 왼쪽 메뉴에서 "Storage" 클릭  
+6. "규칙" 탭에서 Storage 규칙 설정
+7. 각각 "게시" 버튼 클릭
+
+주의사항:
+- 개발 중에는 모든 사용자에게 허용하는 규칙을 사용할 수 있습니다
+- 프로덕션 배포 전에는 반드시 적절한 보안 규칙을 설정하세요
+- 현재 Firestore 규칙은 2025년 10월 23일까지 유효합니다
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

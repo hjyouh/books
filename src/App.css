@@ -1,0 +1,689 @@
+/* 전체 레이아웃 */
+.publishing-website {
+  font-family: 'Suite', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+  line-height: 1.6;
+  color: #333;
+  background-color: #fff;
+  margin: 0 auto;
+  padding: 0;
+  min-height: 100vh;
+  width: 100%;
+  max-width: 1600px;
+}
+
+/* 헤더 */
+.main-header {
+  background: #fff;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+}
+
+.header-content {
+  max-width: 1600px;
+  margin: 0 auto;
+  padding: 0 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  height: 80px;
+}
+
+.logo-section {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.logo-icon {
+  font-size: 32px;
+  color: #2563eb;
+}
+
+.logo-text h1 {
+  margin: 0;
+  font-size: 16px !important; /* 더 축소: 강제 적용 */
+  font-weight: 700;
+  color: #1f2937;
+  line-height: 1.2;
+}
+
+.logo-text p {
+  margin: 0;
+  font-size: 16px !important; /* 부제목도 16px로 동일하게 */
+  color: #374151 !important; /* 더 진한 색상으로 대비 증가 */
+  font-weight: 600 !important; /* 더 굵게 */
+  line-height: 1.2;
+  margin-top: 2px;
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.user-menu {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 14px;
+}
+
+.icon-btn {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  padding: 8px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.icon-btn img {
+  width: 22px;
+  height: 22px;
+}
+
+.icon-btn:hover {
+  background-color: #eff6ff;
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.18);
+}
+
+.user-greeting {
+  color: #111827;
+  font-weight: 600;
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+
+.user-greeting:hover {
+  color: #2563eb;
+}
+
+.admin-link {
+  color: #2563eb;
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.user-btn {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  padding: 8px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.user-btn img {
+  width: 20px;
+  height: 20px;
+}
+
+.user-btn:hover {
+  background-color: #eff6ff;
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.18);
+}
+
+.logout-btn {
+  display: none;
+}
+
+/* 메인 캐러셀 */
+.hero-carousel {
+  position: relative;
+  margin: 20px 0 20px 0; /* 상단 20px, 하단 20px, 좌우 마진 0 */
+  padding: 0; /* 패딩 제거 */
+  overflow-x: hidden; /* 가로 스크롤 숨김 */
+  overflow-y: visible;
+  max-width: 100%; /* 전체 너비 사용 */
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start; /* 좌측 정렬로 변경 */
+}
+
+/* 초기 로딩 중에는 완전히 숨김 */
+.hero-carousel[data-loading="true"] {
+  display: none !important;
+}
+
+.carousel-section-title {
+  font-size: 32px; /* 글씨 크기 증가: 24px → 32px */
+  font-weight: 700;
+  color: #1f2937;
+  margin: 0 0 15px 0; /* 하단 마진 15px (제목과 슬라이드 사이) */
+  text-align: center; /* 중앙 정렬 */
+  padding: 0; /* 패딩 제거 */
+}
+
+.carousel-container {
+  display: flex;
+  align-items: flex-start; /* 상단 정렬 */
+  transition: transform 0.5s ease;
+  width: max-content; /* 슬라이드 내용에 맞게 확장 */
+  padding-left: 0; /* 첫 슬라이드가 좌측 끝에 오도록 패딩 제거 */
+  padding-right: 20px; /* 우측 패딩만 추가 */
+  margin-left: 0; /* 좌측 마진 제거 */
+}
+
+.carousel-slide {
+  /* 화면 폭에 맞게 자연스럽게 표시 - 슬라이드가 화면에 맞게 조정 */
+  min-width: calc((100vw - 20px) / 4.5); /* 화면 폭에 맞게 4.5개 정도 보이도록 (좌측 패딩 제거로 20px로 조정) */
+  width: calc((100vw - 20px) / 4.5);
+  aspect-ratio: 16 / 9 !important; /* 16:9 비율 고정 */
+  flex-shrink: 0;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 16px; /* 슬라이드 간 간격 */
+  height: auto !important; /* 높이는 aspect-ratio로 자동 계산 */
+}
+
+.slide-content {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.slide-bg {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+
+.library-bg {
+  background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%);
+}
+
+.microphone-bg {
+  background: linear-gradient(135deg, #7c2d12 0%, #dc2626 100%);
+}
+
+.reading-bg {
+  background: linear-gradient(135deg, #7c2d12 0%, #f59e0b 100%);
+}
+
+.slide-text {
+  position: absolute;
+  top: 60%; /* 하단 40% 위치부터 시작 (그라데이션 시작 위치) */
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 3; /* 그라데이션보다 위에 */
+  text-align: left; /* 좌측 정렬 */
+  color: white;
+  padding: 24px 20px 20px 20px; /* 하단과 좌우 패딩 */
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+}
+
+/* 슬라이드 하단 그라데이션 레이어 (별도) */
+.slide-content::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 40%; /* 하단 40% 영역 */
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.7) 0%, rgba(0, 0, 0, 0.7) 50%, transparent 100%);
+  z-index: 1; /* 텍스트보다 아래 */
+  pointer-events: none;
+}
+
+.slide-text h2 {
+  font-size: 28px; /* 제목 크기: 28px */
+  font-weight: 700;
+  margin: 0; /* 제목과 부제목 사이 간격 제거 */
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+}
+
+.slide-text p {
+  font-size: 18px;
+  margin: 0;
+  margin-top: 0; /* 부제목 상단 마진 제거 */
+  line-height: 1.2; /* 줄 간격 조정으로 더 타이트하게 */
+  opacity: 0.9;
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
+}
+
+.carousel-controls {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0;
+  pointer-events: none;
+  left: 0;
+  right: 0;
+}
+
+.carousel-prev {
+  background: none;
+  border: none;
+  width: auto;
+  height: auto;
+  border-radius: 0;
+  font-size: 48px;
+  color: white;
+  cursor: pointer;
+  pointer-events: all;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+  font-weight: bold;
+  padding: 20px;
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.carousel-next {
+  background: none;
+  border: none;
+  width: auto;
+  height: auto;
+  border-radius: 0;
+  font-size: 48px;
+  color: white;
+  cursor: pointer;
+  pointer-events: all;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+  font-weight: bold;
+  padding: 20px;
+  position: absolute;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.carousel-prev:hover {
+  color: rgba(255, 255, 255, 0.8);
+  transform: translateY(-50%) scale(1.2);
+}
+
+.carousel-next:hover {
+  color: rgba(255, 255, 255, 0.8);
+  transform: translateY(-50%) scale(1.2);
+}
+
+.carousel-dots {
+  position: relative; /* absolute에서 relative로 변경 */
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 15px; /* 슬라이드 아래 간격 15px (같은 주제 내) */
+  margin-bottom: 20px; /* 점과 다음 섹션 사이 간격 20px (큰 주제 전환) */
+  z-index: 10;
+}
+
+.dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.3); /* 검정색 반투명으로 변경 (흰 배경에서 보이도록) */
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.dot.active {
+  background: rgba(0, 0, 0, 0.8); /* 활성화된 점은 더 진한 검정색 */
+}
+
+/* 도서 섹션 */
+.book-section {
+  max-width: 1600px;
+  margin: 0 auto 20px; /* 상단 마진 0 (위 섹션의 하단 마진으로 처리), 하단 마진 20px */
+  padding: 0 20px;
+}
+
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin: 0 0 15px 0; /* 상단 마진 0, 하단 마진 15px (제목과 도서 카드 사이 - 같은 주제 내) */
+}
+
+.section-header h2 {
+  font-size: 28px;
+  font-weight: 700;
+  color: #1f2937;
+  margin: 0;
+}
+
+.more-link {
+  color: #6b7280;
+  text-decoration: none;
+  font-size: 16px;
+  font-weight: 500;
+  transition: color 0.2s;
+}
+
+.more-link:hover {
+  color: #2563eb;
+}
+
+/* 도서 캐러셀 */
+.books-carousel {
+  position: relative;
+}
+
+.books-container {
+  display: flex;
+  gap: 20px;
+  overflow-x: auto;
+  scroll-behavior: smooth;
+  padding: 5px 0; /* 패딩 축소: 10px → 5px */
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.books-container::-webkit-scrollbar {
+  display: none;
+}
+
+.book-card {
+  min-width: 270px; /* 1.5배 증가: 180px → 270px */
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+  transition: transform 0.2s, box-shadow 0.2s;
+  cursor: pointer;
+  position: relative; /* 각 카드가 독립적으로 위치하도록 */
+  isolation: isolate; /* 각 카드의 stacking context 분리 */
+}
+
+.book-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+}
+
+.book-cover {
+  width: 100%;
+  height: 360px; /* 1.5배 증가: 240px → 360px */
+  background: #f3f4f6;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  position: relative; /* 텍스트 오버레이를 위한 position */
+}
+
+.book-cover img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.placeholder-cover {
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(135deg, #e5e7eb 0%, #d1d5db 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 48px;
+  color: #9ca3af;
+}
+
+.book-info {
+  position: absolute; /* 이미지 위에 오버레이 */
+  top: 70%; /* 하단 30% 위치부터 시작 (더 아래로 이동) */
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 24px 20px 20px 20px; /* 상단과 좌우 패딩 */
+  /* 그라데이션 없음 - 제목은 상단에 표시 */
+  z-index: 3; /* 그라데이션보다 위에 */
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  pointer-events: none; /* 마우스 이벤트가 이미지로 전달되도록 */
+  will-change: auto; /* 떨림 방지 */
+  transform: translateZ(0); /* 하드웨어 가속으로 떨림 방지 */
+}
+
+/* 도서 카드 하단 그라데이션 레이어 (별도) */
+.book-cover::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 40%; /* 하단 40% 영역 */
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.7) 0%, rgba(0, 0, 0, 0.7) 50%, transparent 100%);
+  z-index: 1; /* 텍스트보다 아래 */
+  pointer-events: none;
+}
+
+/* hover 시 그라데이션 안정화 */
+.book-card:hover .book-info {
+  transform: translateZ(0);
+  transition: none; /* hover 시 transition 제거로 떨림 방지 */
+}
+
+/* 이미지가 없을 때 book-info 숨김 */
+.book-card:has(.placeholder-cover) .book-info {
+  display: none;
+}
+
+.book-info h3 {
+  font-size: 22px; /* 제목 크기 증가: 18px → 22px */
+  font-weight: 600;
+  color: #ffffff; /* 흰색으로 변경 (이미지 위에서 보이도록) */
+  margin: 0 0 2px 0; /* 제목과 부제목 간격 축소: 4px → 2px */
+  line-height: 1.4;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.5); /* 텍스트 가독성을 위한 그림자 */
+}
+
+.book-info .author {
+  font-size: 16px; /* 부제목 크기 증가: 14px → 16px */
+  color: #ffffff; /* 흰색으로 변경 */
+  margin: 0;
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5); /* 텍스트 가독성을 위한 그림자 */
+}
+
+.carousel-arrows {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  pointer-events: none;
+}
+
+.arrow-left, .arrow-right {
+  background: white;
+  border: none;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  font-size: 20px;
+  cursor: pointer;
+  pointer-events: all;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.arrow-left:hover, .arrow-right:hover {
+  background: #f3f4f6;
+  transform: scale(1.1);
+}
+
+.arrow-left {
+  margin-left: -20px;
+}
+
+.arrow-right {
+  margin-right: -20px;
+}
+
+/* 푸터 */
+.main-footer {
+  background: #ffffff; /* 검정색에서 흰색으로 변경 */
+  color: #333;
+  padding: 60px 0 40px 0;
+  margin-top: 80px;
+}
+
+.footer-content {
+  max-width: 1600px;
+  margin: 0 auto;
+  padding: 0 20px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 40px;
+}
+
+.footer-section h3 {
+  font-size: 18px;
+  font-weight: 600;
+  margin: 0 0 16px 0;
+  color: #1f2937; /* 흰색에서 검정색으로 변경 */
+}
+
+.footer-section p {
+  font-size: 14px;
+  color: #4b5563; /* 회색에서 더 진한 회색으로 변경 */
+  margin: 0 0 8px 0;
+  line-height: 1.5;
+}
+
+/* 반응형 디자인 */
+@media (max-width: 768px) {
+  .header-content {
+    padding: 0 16px;
+    height: 60px;
+  }
+  
+  .logo-text h1 {
+    font-size: 16px !important; /* 제목 크기 통일 */
+  }
+  
+  .logo-text p {
+    font-size: 16px !important; /* 부제목 크기 통일 */
+    color: #374151 !important; /* 더 진한 색상 */
+    font-weight: 600 !important; /* 더 굵게 */
+  }
+  
+  .hero-carousel {
+    /* height 제거 - aspect-ratio로 자동 조정 */
+  }
+  
+  .carousel-slide {
+    aspect-ratio: 16 / 9; /* 모바일에서도 16:9 비율 유지 */
+  }
+  
+  .slide-text h2 {
+    font-size: 32px;
+  }
+  
+  .slide-text p {
+    font-size: 16px;
+  }
+  
+  .section-header h2 {
+    font-size: 24px;
+  }
+  
+  .book-card {
+    min-width: 150px;
+  }
+  
+  .book-cover {
+    height: 200px;
+  }
+  
+  .carousel-arrows {
+    display: none;
+  }
+  
+  .footer-content {
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 30px;
+  }
+}
+
+@media (max-width: 480px) {
+  .header-actions {
+    gap: 8px;
+  }
+  
+  .user-menu {
+    flex-direction: column;
+    gap: 8px;
+  }
+  
+  .hero-carousel {
+    /* height 제거 - aspect-ratio로 자동 조정 */
+  }
+  
+  .carousel-slide {
+    aspect-ratio: 16 / 9; /* 작은 화면에서도 16:9 비율 유지 */
+  }
+  
+  .slide-text h2 {
+    font-size: 24px;
+  }
+  
+  .slide-text p {
+    font-size: 14px;
+  }
+  
+  .book-card {
+    min-width: 120px;
+  }
+  
+  .book-cover {
+    height: 160px;
+  }
+  
+  .book-info {
+    padding: 12px;
+  }
+  
+  .book-info h3 {
+    font-size: 14px;
+  }
+  
+  .book-info .author {
+    font-size: 12px;
+  }
+}

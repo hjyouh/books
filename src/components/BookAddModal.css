@@ -1,0 +1,390 @@
+.book-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.book-modal-new-layout {
+  background: white;
+  border-radius: 12px;
+  width: 85%;
+  max-width: 1100px; /* 모달 축소 */
+  max-height: 90vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+}
+
+.book-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 16px; /* 적절한 패딩 */
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.book-modal-header h2 {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #333;
+  padding-left: 8px; /* 제목 좌측에 적절한 패딩 추가 */
+}
+
+.book-modal-close {
+  background: none;
+  border: none;
+  font-size: 24px;
+  cursor: pointer;
+  color: #666;
+  padding: 0;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: background-color 0.2s ease;
+  margin-left: auto; /* X 버튼을 우측으로 이동 */
+}
+
+.book-modal-close:hover {
+  background-color: #f0f0f0;
+  color: #333;
+}
+
+.book-modal-content {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+  flex-direction: row; /* 좌측에 책 표지, 우측에 입력 영역 */
+  gap: 0; /* 섹션 간 간격 완전히 제거 */
+}
+
+/* 좌측: 책 표지 영역 */
+.book-cover-section {
+  width: 550px; /* 이미지 영역 더 크게 */
+  min-width: 550px; /* 최소 너비 보장 */
+  border-right: 1px solid #e0e0e0; /* 우측에 보더 */
+  border-left: none;
+  display: flex;
+  flex-direction: column;
+  padding: 20px 0 20px 20px; /* 우측 패딩 완전히 제거 */
+  background: #f8f9fa;
+  flex-shrink: 0; /* 크기 고정 */
+  margin-right: 0; /* 우측 마진 제거 */
+}
+
+.cover-controls {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px dashed #d0d0d0;
+}
+
+.cover-change-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: transparent; /* 색상 없음 */
+  color: #333;
+  border: 2px solid #333; /* 검은색 테두리 */
+  font-size: 24px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  font-weight: 600;
+  line-height: 1;
+  padding: 0;
+}
+
+.cover-change-btn:hover {
+  border-color: #666;
+  color: #666;
+  transform: scale(1.1);
+}
+
+.cover-add-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: transparent; /* 색상 없음 */
+  color: #333;
+  border: 2px solid #333; /* 검은색 테두리 */
+  font-size: 24px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  font-weight: 600;
+  line-height: 1;
+  padding: 0;
+}
+
+.cover-add-btn:hover:not(:disabled) {
+  border-color: #666;
+  color: #666;
+  transform: scale(1.1);
+}
+
+.cover-add-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.cover-delete-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--pastel-danger, #ffafb0);
+  color: #333;
+  border: none;
+  font-size: 18px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.cover-delete-btn:hover {
+  background: var(--pastel-danger-hover, #ffafd8);
+  transform: scale(1.1);
+}
+
+.cover-preview-area {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: white;
+  border: 2px dashed #d0d0d0; /* 점선으로 3:4 영역 표시 */
+  border-radius: 8px;
+  min-height: 750px; /* 이미지 영역 더 크게 */
+  position: relative;
+  aspect-ratio: 3 / 4; /* 3:4 비율 강제 */
+  width: 100%;
+  max-width: 100%;
+  overflow: hidden;
+}
+
+.cover-placeholder {
+  color: #999;
+  font-size: 1.2rem;
+  text-align: center;
+}
+
+.cover-preview-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 8px;
+}
+
+/* 우측: 폼 영역 */
+.book-form-section {
+  flex: 1;
+  overflow-y: auto;
+  padding: 20px 20px 20px 24px; /* 좌측 패딩 증가 */
+  display: flex;
+  flex-direction: column;
+  margin-left: 0; /* 좌측 마진 제거 */
+  min-width: 0; /* 빈 공간 제거를 위한 최소 너비 */
+}
+
+.book-modal-form-new {
+  display: flex;
+  flex-direction: column;
+  gap: 12px; /* 패딩 축소 (20px -> 12px) */
+  flex: 1;
+  max-width: 100%; /* 최대 너비 제한 */
+}
+
+.form-row {
+  display: flex;
+  align-items: center;
+  gap: 4px; /* 레이블과 입력 필드 사이 간격 최소화 */
+  margin-bottom: 0; /* 추가 마진 제거 */
+}
+
+/* 입력 필드가 충분히 길어지도록 flex 조정 */
+.form-row .form-input-inline,
+.form-row .form-select-inline {
+  flex: 1 1 auto; /* 가능한 한 길게 확장 */
+}
+
+.form-row label {
+  min-width: auto; /* 레이블 너비 자동 (콜론 포함 텍스트만큼만) */
+  width: auto;
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: #333;
+  white-space: nowrap;
+  text-align: left; /* 레이블 좌측 정렬 */
+  margin-right: 0; /* 우측 마진 제거 */
+  padding-right: 0; /* 우측 패딩 제거 */
+  padding-left: 12px; /* 레이블 좌측 패딩 추가 */
+}
+
+.form-input-inline,
+.form-select-inline {
+  flex: 1;
+  min-width: 400px; /* 입력란을 길게 만들기 위한 최소 너비 */
+  padding: 10px 14px; /* 모든 입력 필드에 동일한 패딩 적용 */
+  border: 1px solid #d0d0d0;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  background-color: #f8f9fa;
+  transition: border-color 0.2s ease, background-color 0.2s ease;
+  box-sizing: border-box;
+  text-align: left; /* 입력 내용 좌측 정렬 */
+}
+
+.form-input-inline:focus,
+.form-select-inline:focus,
+.form-textarea-inline:focus {
+  outline: none;
+  border-color: var(--pastel-primary, #acc4ff);
+  background-color: white;
+}
+
+.form-select-inline {
+  cursor: pointer;
+  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='m6 8 4 4 4-4'/%3e%3c/svg%3e");
+  background-position: right 12px center;
+  background-repeat: no-repeat;
+  background-size: 16px;
+  padding-right: 40px;
+  appearance: none;
+}
+
+.form-row.description-row {
+  align-items: flex-start;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.form-row.description-row label {
+  text-align: left;
+  margin-bottom: 8px;
+}
+
+.form-textarea-inline {
+  width: 100%;
+  padding: 12px 14px;
+  border: 1px solid #d0d0d0;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  background-color: #f8f9fa;
+  font-family: inherit;
+  resize: vertical;
+  min-height: 300px; /* 도서 설명 영역 더 크게 (200px -> 300px) */
+  flex: 1;
+  transition: border-color 0.2s ease, background-color 0.2s ease;
+  box-sizing: border-box;
+  text-align: left; /* 입력 내용 좌측 정렬 */
+}
+
+.form-submit-container {
+  margin-top: auto;
+  padding-top: 20px;
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+}
+
+.book-add-button {
+  min-width: 120px; /* 수정 모드일 때 버튼 너비 고정 */
+  background: var(--pastel-primary, #acc4ff);
+  color: #333;
+  border: none;
+  padding: 14px 20px;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.book-add-button:hover:not(:disabled) {
+  background: var(--pastel-primary-hover, #b5c7ed);
+}
+
+.book-add-button:disabled {
+  background: #c0c0c0;
+  cursor: not-allowed;
+}
+
+.book-cancel-button {
+  padding: 14px 20px;
+  border: 1px solid #d0d0d0;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  background: white;
+  color: #333;
+}
+
+.book-cancel-button:hover:not(:disabled) {
+  background: #f0f0f0;
+  border-color: #b0b0b0;
+}
+
+.book-cancel-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* 반응형 디자인 */
+@media (max-width: 768px) {
+  .book-modal-new-layout {
+    width: 95%;
+    max-height: 95vh;
+  }
+  
+  .book-modal-content {
+    flex-direction: column;
+  }
+  
+  .book-cover-section {
+    width: 100%;
+    border-left: none;
+    border-bottom: 1px solid #e0e0e0;
+    min-height: 200px;
+  }
+  
+  .cover-preview-area {
+    min-height: 200px;
+  }
+  
+  .form-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+  
+  .form-row label {
+    min-width: auto;
+  }
+  
+  .form-input-inline,
+  .form-select-inline,
+  .form-textarea-inline {
+    width: 100%;
+  }
+}

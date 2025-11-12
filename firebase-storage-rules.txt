@@ -1,0 +1,49 @@
+Firebase Storage 보안 규칙 설정 안내
+
+Firebase 콘솔에서 다음 단계를 따라 Storage 보안 규칙을 설정하세요:
+
+1. Firebase 콘솔 (https://console.firebase.google.com) 접속
+2. 프로젝트 선택 (books-c8450)
+3. 왼쪽 메뉴에서 "Storage" 클릭
+4. "규칙" 탭 클릭
+5. 다음 규칙으로 교체:
+
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    // 인증된 사용자만 읽기/쓰기 허용
+    match /{allPaths=**} {
+      allow read, write: if request.auth != null;
+    }
+    
+    // 또는 개발 중에는 모든 사용자에게 허용 (보안상 권장하지 않음)
+    // match /{allPaths=**} {
+    //   allow read, write: if true;
+    // }
+  }
+}
+
+6. "게시" 버튼 클릭
+
+주의사항:
+- 개발 중에는 모든 사용자에게 허용하는 규칙을 사용할 수 있지만, 프로덕션에서는 반드시 인증된 사용자만 허용하도록 설정하세요.
+- 현재 프로젝트에서 인증이 제대로 설정되어 있지 않다면, 임시로 모든 사용자에게 허용하는 규칙을 사용하세요.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -1,0 +1,445 @@
+.book-detail-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+  padding: 20px;
+}
+
+.book-detail-modal {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+  max-width: 1000px; /* 더 넓게: 800px → 1000px */
+  width: 100%;
+  max-height: 90vh;
+  overflow-y: auto; /* 스크롤 가능하도록 */
+  overflow-x: hidden;
+  position: relative;
+  animation: modalSlideIn 0.3s ease-out;
+}
+
+@keyframes modalSlideIn {
+  from {
+    opacity: 0;
+    transform: scale(0.9) translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.book-detail-close {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  background: none;
+  border: none;
+  font-size: 24px;
+  cursor: pointer;
+  color: #6b7280;
+  z-index: 10;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: all 0.2s;
+}
+
+.book-detail-close:hover {
+  background: #f3f4f6;
+  color: #374151;
+}
+
+.book-detail-content {
+  display: flex;
+  min-height: 500px;
+  gap: 0;
+}
+
+.book-cover-section {
+  flex: 0 0 450px; /* 더 넓게: 350px → 450px */
+  padding: 10px; /* 패딩을 10px로 축소 */
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center; /* 중앙 정렬 */
+  background: #ffffff; /* 흰색 배경으로 변경 */
+  border-right: 1px solid #e5e7eb;
+}
+
+.book-cover-image {
+  width: calc(100% - 20px); /* 좌우 패딩 고려하여 약간 작게 */
+  max-width: 100%; /* 최대 너비 제한 제거 */
+  height: auto; /* 높이 자동 */
+  aspect-ratio: 3 / 4; /* 3:4 비율 유지 */
+  border: none; /* 테두리 제거 */
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.book-cover-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover; /* 이미지가 컨테이너를 꽉 채우도록 */
+  display: block; /* 하단 여백 제거 */
+}
+
+.placeholder-cover {
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  text-align: center;
+  padding: 20px;
+}
+
+.placeholder-text h3 {
+  font-size: 24px;
+  font-weight: 700;
+  margin: 0 0 8px 0;
+  line-height: 1.2;
+}
+
+.placeholder-text p {
+  font-size: 14px;
+  margin: 0;
+  opacity: 0.9;
+}
+
+.book-cover-info {
+  text-align: center;
+}
+
+.book-cover-info h3 {
+  font-size: 20px; /* 더 크게: 18px → 20px */
+  font-weight: 600;
+  color: #1f2937;
+  margin: 0 0 6px 0; /* 간격 증가: 4px → 6px */
+  line-height: 1.3;
+}
+
+.book-cover-info .author {
+  font-size: 15px; /* 더 크게: 14px → 15px */
+  color: #4b5563; /* 더 진하게: #6b7280 → #4b5563 */
+  margin: 0;
+}
+
+.book-details-section {
+  flex: 1;
+  padding: 40px 40px; /* 패딩 증가: 30px → 40px */
+  overflow-y: auto;
+  background: #ffffff;
+}
+
+
+.detail-item {
+  margin-bottom: 28px; /* 간격 증가: 24px → 28px */
+}
+
+.detail-item h4 {
+  font-size: 16px;
+  font-weight: 600;
+  color: #1f2937; /* 더 진하게: #374151 → #1f2937 */
+  margin: 0 0 12px 0; /* 간격 증가: 8px → 12px */
+}
+
+.detail-item p {
+  font-size: 15px; /* 더 크게: 14px → 15px */
+  color: #4b5563; /* 더 진하게: #6b7280 → #4b5563 */
+  margin: 0;
+  line-height: 1.6; /* 줄간격 증가: 1.5 → 1.6 */
+}
+
+.hashtags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.hashtag {
+  background: #e0f2fe;
+  color: #0369a1;
+  padding: 4px 12px;
+  border-radius: 16px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.modal-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 30px;
+  padding-top: 20px;
+  border-top: 1px solid #e5e7eb;
+}
+
+.review-apply-btn {
+  background: #2563eb;
+  color: white;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.review-apply-btn:hover {
+  background: #1d4ed8;
+}
+
+.add-to-favorites-btn {
+  background: #2563eb;
+  color: white;
+  border: none;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  font-size: 20px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.add-to-favorites-btn:hover {
+  background: #1d4ed8;
+  transform: scale(1.05);
+}
+
+/* 반응형 디자인 */
+@media (max-width: 768px) {
+  .book-detail-overlay {
+    padding: 10px;
+  }
+  
+  .book-detail-modal {
+    max-height: 95vh;
+  }
+  
+  .book-detail-content {
+    flex-direction: column;
+    min-height: auto;
+  }
+  
+  .book-cover-section {
+    flex: none;
+    padding: 20px;
+    border-right: none;
+    border-bottom: 1px solid #e5e7eb;
+  }
+  
+  .book-cover-image {
+    width: 150px;
+    height: 210px;
+  }
+  
+  .book-details-section {
+    padding: 20px;
+  }
+  
+  .book-title-header h2 {
+    font-size: 20px;
+  }
+  
+  .modal-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .review-apply-btn {
+    width: 100%;
+  }
+  
+  .add-to-favorites-btn {
+    align-self: center;
+  }
+}
+
+@media (max-width: 480px) {
+  .book-cover-section {
+    padding: 15px;
+  }
+  
+  .book-cover-image {
+    width: 120px;
+    height: 168px;
+  }
+  
+  .book-details-section {
+    padding: 15px;
+  }
+  
+  .book-title-header h2 {
+    font-size: 18px;
+  }
+  
+  .detail-item h4 {
+    font-size: 14px;
+  }
+  
+  .detail-item p {
+    font-size: 13px;
+  }
+}
+
+/* 로그인 유도 모달 스타일 */
+.login-prompt-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2001;
+}
+
+.login-prompt-modal {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+  max-width: 400px;
+  width: 90%;
+  padding: 30px;
+  text-align: center;
+  position: relative;
+  animation: modalSlideIn 0.3s ease-out;
+}
+
+.login-prompt-close {
+  position: absolute;
+  top: 15px;
+  right: 15px;
+  background: none;
+  border: none;
+  font-size: 24px;
+  cursor: pointer;
+  color: #6b7280;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: all 0.2s;
+}
+
+.login-prompt-close:hover {
+  background: #f3f4f6;
+  color: #374151;
+}
+
+.login-prompt-content {
+  padding: 20px 0;
+}
+
+.login-prompt-icon {
+  font-size: 48px;
+  color: #2563eb;
+  margin-bottom: 20px;
+  display: inline-block;
+  font-weight: bold;
+}
+
+.login-prompt-title {
+  font-size: 20px;
+  font-weight: 700;
+  color: #2563eb;
+  margin: 0 0 20px 0;
+}
+
+.login-prompt-message-main {
+  font-size: 16px;
+  font-weight: 600;
+  color: #374151;
+  margin: 0 0 8px 0;
+  line-height: 1.4;
+}
+
+.login-prompt-message-sub {
+  font-size: 14px;
+  color: #6b7280;
+  margin: 0 0 30px 0;
+  line-height: 1.5;
+}
+
+.login-prompt-button {
+  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+  color: white;
+  border: none;
+  padding: 14px 28px;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-family: 'Suite', sans-serif;
+  box-shadow: 0 4px 15px rgba(37, 99, 235, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin: 0 auto;
+  min-width: 160px;
+}
+
+.login-prompt-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(37, 99, 235, 0.4);
+}
+
+.login-prompt-button:active {
+  transform: translateY(0);
+}
+
+/* 모바일 반응형 */
+@media (max-width: 480px) {
+  .login-prompt-modal {
+    padding: 20px;
+    margin: 20px;
+  }
+  
+  .login-prompt-icon {
+    font-size: 40px;
+  }
+  
+  .login-prompt-title {
+    font-size: 18px;
+  }
+  
+  .login-prompt-message-main {
+    font-size: 15px;
+  }
+  
+  .login-prompt-message-sub {
+    font-size: 13px;
+  }
+  
+  .login-prompt-button {
+    padding: 12px 24px;
+    font-size: 15px;
+  }
+}

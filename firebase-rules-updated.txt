@@ -1,0 +1,58 @@
+Firebase 보안 규칙 업데이트 (권한 오류 해결용)
+
+=== Firestore 규칙 (개발용 - 모든 사용자 허용) ===
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // 개발용: 모든 사용자에게 읽기/쓰기 허용
+    match /{document=**} {
+      allow read, write: if true;
+    }
+  }
+}
+
+=== Firebase Storage 규칙 (개발용 - 모든 사용자 허용) ===
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+    // 개발용: 모든 사용자에게 읽기/쓰기 허용
+    match /{allPaths=**} {
+      allow read, write: if true;
+    }
+  }
+}
+
+=== 설정 방법 ===
+1. Firebase 콘솔 (https://console.firebase.google.com) 접속
+2. 프로젝트 선택 (books-c8450)
+3. 왼쪽 메뉴에서 "Firestore Database" 클릭
+4. "규칙" 탭에서 위의 Firestore 규칙으로 교체
+5. "게시" 버튼 클릭
+6. 왼쪽 메뉴에서 "Storage" 클릭
+7. "규칙" 탭에서 위의 Storage 규칙으로 교체
+8. "게시" 버튼 클릭
+
+주의사항:
+- 이 규칙은 개발용으로 모든 사용자에게 접근을 허용합니다
+- 프로덕션 배포 전에는 반드시 적절한 보안 규칙을 설정하세요
+- 현재 권한 오류를 해결하기 위한 임시 조치입니다
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
