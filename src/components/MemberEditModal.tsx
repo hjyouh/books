@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
-import { doc, updateDoc } from 'firebase/firestore'
+import { doc, setDoc } from 'firebase/firestore'
 import { db } from '../firebase'
 import './MemberEditModal.css'
 
@@ -71,7 +71,7 @@ const MemberEditModal: React.FC<MemberEditModalProps> = ({ isOpen, onClose, memb
     try {
       setLoading(true)
       const memberRef = doc(db, 'users', member.uid)
-      await updateDoc(memberRef, {
+      await setDoc(memberRef, {
         name: formData.name,
         nickname: formData.nickname,
         phone: formData.phone,
@@ -81,7 +81,7 @@ const MemberEditModal: React.FC<MemberEditModalProps> = ({ isOpen, onClose, memb
         instagram: formData.instagram || '',
         isAdmin: formData.isAdmin,
         level: formData.isAdmin ? 'admin' : 'customer'
-      })
+      }, { merge: true })
 
       alert('회원 정보가 성공적으로 수정되었습니다.')
       onUpdate() // 목록 새로고침
