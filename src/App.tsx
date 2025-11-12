@@ -323,8 +323,8 @@ function App() {
           if (userDoc.exists()) {
             const userData = userDoc.data()
             const hasAdminRights =
-              userData.level === 'admin' ||
-              userData.isAdmin === true
+              (typeof userData.level === 'string' && userData.level.toLowerCase() === 'admin') ||
+              Boolean(userData.isAdmin)
             setIsAdmin(hasAdminRights)
             setHeaderName(
               userData.nickname ||
