@@ -156,7 +156,7 @@
 }
 
 .carousel-section-title {
-  font-size: 32px; /* 글씨 크기 증가: 24px → 32px */
+  font-size: 28px; /* 글씨 크기 조정: 32px → 28px */
   font-weight: 700;
   color: #1f2937;
   margin: 0 0 15px 0; /* 하단 마진 15px (제목과 슬라이드 사이) */
