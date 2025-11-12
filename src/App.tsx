@@ -322,9 +322,27 @@ function App() {
           const userDoc = await getDoc(doc(db, 'users', user.uid))
           if (userDoc.exists()) {
             const userData = userDoc.data()
+
+            const normalizeString = (value: unknown) =>
+              typeof value === 'string' ? value.trim().toLowerCase() : ''
+
+            const levelValue = normalizeString(userData.level)
+
+            const isTruthyFlag = (value: unknown) => {
+              if (typeof value === 'boolean') return value
+              if (typeof value === 'number') return value === 1
+              if (typeof value === 'string') {
+                const normalized = value.trim().toLowerCase()
+                return ['true', '1', 'yes', 'y', 'on', 'admin', '관리자', '활성'].includes(normalized)
+              }
+              return false
+            }
+
             const hasAdminRights =
-              (typeof userData.level === 'string' && userData.level.toLowerCase() === 'admin') ||
-              Boolean(userData.isAdmin)
+              levelValue === 'admin' ||
+              levelValue === '관리자' ||
+              isTruthyFlag(userData.isAdmin)
+
             setIsAdmin(hasAdminRights)
             setHeaderName(
               userData.nickname ||
