@@ -322,7 +322,10 @@ function App() {
           const userDoc = await getDoc(doc(db, 'users', user.uid))
           if (userDoc.exists()) {
             const userData = userDoc.data()
-            setIsAdmin(userData.level === "admin")
+            const hasAdminRights =
+              userData.level === 'admin' ||
+              userData.isAdmin === true
+            setIsAdmin(hasAdminRights)
             setHeaderName(
               userData.nickname ||
               userData.name ||

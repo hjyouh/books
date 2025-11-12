@@ -15,6 +15,7 @@ interface MemberData {
   blog?: string;
   instagram?: string;
   isAdmin?: boolean;
+  level?: string;
 }
 
 interface MemberEditModalProps {
@@ -50,7 +51,7 @@ const MemberEditModal: React.FC<MemberEditModalProps> = ({ isOpen, onClose, memb
         address: member.address || '',
         blog: member.blog || '',
         instagram: member.instagram || '',
-        isAdmin: member.isAdmin || false
+        isAdmin: member.isAdmin || member.level === 'admin' || false
       })
     }
   }, [member, isOpen])
@@ -78,7 +79,8 @@ const MemberEditModal: React.FC<MemberEditModalProps> = ({ isOpen, onClose, memb
         address: formData.address,
         blog: formData.blog || '',
         instagram: formData.instagram || '',
-        isAdmin: formData.isAdmin
+        isAdmin: formData.isAdmin,
+        level: formData.isAdmin ? 'admin' : 'customer'
       })
 
       alert('회원 정보가 성공적으로 수정되었습니다.')
