@@ -72,6 +72,21 @@ function App() {
   const [isInitialLoad, setIsInitialLoad] = useState(true) // 초기 로딩 상태
   const [isMobileView, setIsMobileView] = useState(false) // 모바일 뷰 전환 상태
 
+  // 실제 모바일 기기에서 접속했을 때 자동으로 모바일 뷰 활성화
+  useEffect(() => {
+    const checkMobileDevice = () => {
+      const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth <= 768
+      if (isMobile) {
+        setIsMobileView(true)
+      }
+    }
+    
+    checkMobileDevice()
+    window.addEventListener('resize', checkMobileDevice)
+    
+    return () => window.removeEventListener('resize', checkMobileDevice)
+  }, [])
+
   const timestampToMillis = (value: any): number | null => {
     if (!value) return null
     try {
