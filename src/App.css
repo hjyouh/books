@@ -727,95 +727,182 @@
 }
 
 /* 모바일 뷰포트에서도 모바일 스타일 적용 */
-.mobile-viewport .card-slider {
-  margin: 20px 0;
-  padding: 0;
-  overflow: visible;
-  position: relative;
-  width: 100%;
-  height: 240px;
-  touch-action: pan-x;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+.mobile-viewport .card-slider,
+.mobile-viewport .hero-carousel.card-slider {
+  margin: 20px 0 !important;
+  padding: 0 20px !important; /* 좌우 슬라이드가 보이도록 패딩 추가 */
+  overflow: visible !important;
+  position: relative !important;
+  width: 100% !important;
+  height: 240px !important;
+  touch-action: pan-x !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
 }
 
-.mobile-viewport .card-slider-container {
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  justify-content: center;
-  width: 100%;
-  height: 100%;
-  position: relative;
-  gap: 0;
-  padding: 0;
+.mobile-viewport .card-slider-container,
+.mobile-viewport .carousel-container.card-slider-container {
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  justify-content: flex-start !important;
+  width: max-content !important;
+  height: 100% !important;
+  position: relative !important;
+  gap: 0 !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  will-change: transform !important;
+  overflow: visible !important;
 }
 
 /* 메인 슬라이드 (중앙, 모바일 사이즈보다 조금 작게) */
-.mobile-viewport .card-slide {
-  width: 320px !important;
-  min-width: 320px !important;
-  max-width: 320px !important;
+.mobile-viewport .card-slide,
+.mobile-viewport .carousel-slide.card-slide {
+  width: 260px !important;
+  min-width: 260px !important;
+  max-width: 260px !important;
   height: 220px !important;
-  flex: 0 0 320px !important;
+  flex: 0 0 260px !important;
   margin: 0 !important;
-  border-radius: 16px;
-  overflow: hidden;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
-  transition: transform 0.3s ease-out, opacity 0.3s ease-out;
-  position: relative;
-  z-index: 1;
-  pointer-events: auto;
+  border-radius: 16px !important;
+  overflow: hidden !important;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5) !important;
+  transition: transform 0.3s ease-out, opacity 0.3s ease-out !important;
+  position: relative !important;
+  z-index: 1 !important;
+  pointer-events: auto !important;
   opacity: 1 !important;
   display: flex !important;
+  visibility: visible !important;
 }
 
-.mobile-viewport .card-slide.active {
+.mobile-viewport .card-slide.active,
+.mobile-viewport .carousel-slide.card-slide.active {
   transform: scale(1) !important;
   opacity: 1 !important;
-  z-index: 3;
-  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.6);
+  z-index: 3 !important;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.6) !important;
+  visibility: visible !important;
+  display: flex !important;
 }
 
-/* 좌우에 배치되는 이전/다음 슬라이드 */
+.mobile-viewport .card-slide .slide-content {
+  width: 100% !important;
+  height: 100% !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  position: relative !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+.mobile-viewport .card-slide .slide-bg {
+  position: absolute !important;
+  top: 0 !important;
+  left: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  background-size: cover !important;
+  background-position: center !important;
+  background-repeat: no-repeat !important;
+  z-index: 1 !important;
+}
+
+.mobile-viewport .card-slide .slide-text {
+  position: absolute !important;
+  top: 60% !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  z-index: 3 !important;
+  text-align: left !important;
+  color: white !important;
+  padding: 24px 20px 20px 20px !important;
+  display: flex !important;
+  flex-direction: column !important;
+  justify-content: flex-start !important;
+}
+
+/* 좌우에 배치되는 이전/다음 슬라이드 - 20px씩만 보이도록 */
 .mobile-viewport .card-slide.prev {
-  width: 100px !important;
-  min-width: 100px !important;
-  max-width: 100px !important;
-  height: 180px !important;
-  opacity: 0.6 !important;
-  z-index: 2;
-  border-radius: 12px;
+  width: 260px !important;
+  min-width: 260px !important;
+  max-width: 260px !important;
+  height: 220px !important;
+  opacity: 0.5 !important;
+  z-index: 1 !important;
+  border-radius: 16px;
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.4);
-  transform: scale(0.85) !important;
+  transform: scale(0.9) !important;
   pointer-events: auto;
   display: flex !important;
-  position: absolute;
-  left: 20px;
+  position: relative;
+  overflow: hidden !important;
+  clip-path: inset(0 240px 0 0); /* 오른쪽 240px 잘라서 왼쪽 20px만 보이게 */
+}
+
+.mobile-viewport .card-slide.prev .slide-content {
+  width: 100% !important;
+  height: 100% !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  position: relative !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+.mobile-viewport .card-slide.prev .slide-bg,
+.mobile-viewport .card-slide.prev .slide-text {
+  position: absolute !important;
+  width: 100% !important;
+  height: 100% !important;
 }
 
 .mobile-viewport .card-slide.next {
-  width: 100px !important;
-  min-width: 100px !important;
-  max-width: 100px !important;
-  height: 180px !important;
-  opacity: 0.6 !important;
-  z-index: 2;
-  border-radius: 12px;
+  width: 260px !important;
+  min-width: 260px !important;
+  max-width: 260px !important;
+  height: 220px !important;
+  opacity: 0.5 !important;
+  z-index: 1 !important;
+  border-radius: 16px;
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.4);
-  transform: scale(0.85) !important;
+  transform: scale(0.9) !important;
   pointer-events: auto;
   display: flex !important;
-  position: absolute;
-  right: 20px;
+  position: relative;
+  overflow: hidden !important;
+  clip-path: inset(0 0 0 240px); /* 왼쪽 240px 잘라서 오른쪽 20px만 보이게 */
+}
+
+.mobile-viewport .card-slide.next .slide-content {
+  width: 100% !important;
+  height: 100% !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  position: relative !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+.mobile-viewport .card-slide.next .slide-bg,
+.mobile-viewport .card-slide.next .slide-text {
+  position: absolute !important;
+  width: 100% !important;
+  height: 100% !important;
 }
 
 
 .mobile-viewport .card-slide:not(.active):not(.prev):not(.next) {
-  opacity: 0;
-  pointer-events: none;
-  display: none;
+  opacity: 0 !important;
+  pointer-events: none !important;
+  display: none !important;
+  visibility: hidden !important;
 }
 
 /* 모바일 뷰포트에서 다른 섹션 숨김 */

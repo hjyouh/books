@@ -671,8 +671,9 @@ function App() {
                   handleTouchMove(e)
                 }
               }}
-              onTouchEnd={() => {
+              onTouchEnd={(e) => {
                 if (isMobileView) {
+                  e.stopPropagation()
                   handleTouchEnd()
                 }
               }}
@@ -681,7 +682,7 @@ function App() {
                 className="carousel-container card-slider-container"
                 style={{
                   transform: isMobileView
-                    ? `translateX(calc(-${currentSlideIndex} * 320px + ${isDragging ? dragOffset : 0}px + 50% - 160px))`
+                    ? `translateX(calc(-${currentSlideIndex} * 260px + ${isDragging ? dragOffset : 0}px + 50% - 130px))`
                     : (typeof window !== 'undefined' && window.innerWidth <= 768)
                     ? `translateX(calc(-${currentSlideIndex} * 85% + ${isDragging ? dragOffset : 0}px))`
                     : `translateX(calc(-${currentSlideIndex} * (460px + 16px)))`,
