@@ -13,6 +13,10 @@ interface SlideData {
   linkType?: 'book' | 'ad' | 'custom'
   order?: number
   isActive?: boolean
+  postingStart?: Timestamp | null
+  postingEnd?: Timestamp | null
+  bookCategory?: string
+  selectedBookId?: string
 }
 
 interface SlideAddModalProps {
@@ -34,6 +38,26 @@ interface SlideFormData {
   selectedBookId?: string // 선택된 도서 ID
   titleColor?: string // 제목 색상
   subtitleColor?: string // 부제목 색상
+  postingStart: string
+  postingEnd: string
+}
+
+const toDateInputValue = (value: any): string => {
+  if (!value) return ''
+  try {
+    if (value.toDate) {
+      return value.toDate().toISOString().split('T')[0]
+    }
+    if (value.seconds) {
+      return new Date(value.seconds * 1000).toISOString().split('T')[0]
+    }
+    if (typeof value === 'string' && value.includes('-')) {
+      return value
+    }
+  } catch (error) {
+    console.error('날짜 변환 오류:', error)
+  }
+  return ''
 }
 
 declare global {
@@ -53,7 +77,9 @@ const SlideAddModal: React.FC<SlideAddModalProps> = ({ isOpen, onClose, onSucces
     bookCategory: '',
     selectedBookId: '',
     titleColor: '#FFFFFF',
-    subtitleColor: '#FFFFFF'
+    subtitleColor: '#FFFFFF',
+    postingStart: '',
+    postingEnd: ''
   })
   const [books, setBooks] = useState<any[]>([])
   const [filteredBooks, setFilteredBooks] = useState<any[]>([])
@@ -150,10 +176,12 @@ const SlideAddModal: React.FC<SlideAddModalProps> = ({ isOpen, onClose, onSucces
         imageUrl: editSlide.imageUrl || '',
         linkUrl: editSlide.linkUrl || '',
         linkType: linkType,
-        bookCategory: bookCategoryMatch ? bookCategoryMatch[1] : '',
-        selectedBookId: bookIdMatch ? bookIdMatch[1] : '',
+        bookCategory: (editSlide as any).bookCategory || (bookCategoryMatch ? bookCategoryMatch[1] : ''),
+        selectedBookId: (editSlide as any).selectedBookId || (bookIdMatch ? bookIdMatch[1] : ''),
         titleColor: (editSlide as any).titleColor ? String((editSlide as any).titleColor).toUpperCase() : '#FFFFFF',
-        subtitleColor: (editSlide as any).subtitleColor ? String((editSlide as any).subtitleColor).toUpperCase() : '#FFFFFF'
+        subtitleColor: (editSlide as any).subtitleColor ? String((editSlide as any).subtitleColor).toUpperCase() : '#FFFFFF',
+        postingStart: toDateInputValue((editSlide as any).postingStart),
+        postingEnd: toDateInputValue((editSlide as any).postingEnd)
       }
       console.log('수정 모드 - 로드된 linkType:', linkType, 'editSlide.linkType:', editSlide.linkType)
       // 확실히 linkType이 'book' 또는 'custom' 중 하나가 되도록 설정
@@ -178,7 +206,9 @@ const SlideAddModal: React.FC<SlideAddModalProps> = ({ isOpen, onClose, onSucces
         bookCategory: '',
         selectedBookId: '',
         titleColor: '#FFFFFF',
-        subtitleColor: '#FFFFFF'
+        subtitleColor: '#FFFFFF',
+        postingStart: '',
+        postingEnd: ''
       }
       console.log('추가 모드 - 초기화 linkType:', defaultFormData.linkType)
       // 확실히 'book'으로 설정
@@ -215,7 +245,9 @@ const SlideAddModal: React.FC<SlideAddModalProps> = ({ isOpen, onClose, onSucces
         bookCategory: String(formData.bookCategory || '') !== String(initialData.bookCategory || ''),
         selectedBookId: String(formData.selectedBookId || '') !== String(initialData.selectedBookId || ''),
         titleColor: normalizeColor(formData.titleColor) !== normalizeColor(initialData.titleColor),
-        subtitleColor: normalizeColor(formData.subtitleColor) !== normalizeColor(initialData.subtitleColor)
+        subtitleColor: normalizeColor(formData.subtitleColor) !== normalizeColor(initialData.subtitleColor),
+        postingStart: normalizeString(formData.postingStart) !== normalizeString(initialData.postingStart),
+        postingEnd: normalizeString(formData.postingEnd) !== normalizeString(initialData.postingEnd)
       }
       
       const changed = Object.values(fieldChanges).some(v => v === true)
@@ -238,17 +270,32 @@ const SlideAddModal: React.FC<SlideAddModalProps> = ({ isOpen, onClose, onSucces
 
   // Cloudinary 위젯 초기화
   useEffect(() => {
-    const initWidget = () => {
-      if (window.cloudinary) {
-        widgetRef.current = window.cloudinary.createUploadWidget(
+    if (!isOpen) return
+
+    // 모달이 열릴 때마다 기존 위젯 참조 초기화
+    widgetRef.current = null
+
+    const cloudName = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME
+    const uploadPreset = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET
+
+    if (!cloudName || !uploadPreset) {
+      console.error('Cloudinary 환경 변수가 설정되지 않았습니다. VITE_CLOUDINARY_CLOUD_NAME / VITE_CLOUDINARY_UPLOAD_PRESET 값이 필요합니다.')
+      return
+    }
+
+    const createWidget = () => {
+      if (!window.cloudinary || widgetRef.current) return
+
+      try {
+        const widget = window.cloudinary.createUploadWidget(
           {
-            cloudName: import.meta.env.VITE_CLOUDINARY_CLOUD_NAME,
-            uploadPreset: import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET,
+            cloudName,
+            uploadPreset,
             cropping: true,
-            croppingAspectRatio: 16 / 9, // 16:9 비율
+            croppingAspectRatio: 16 / 9,
             maxFiles: 1,
             multiple: false,
-            maxFileSize: 10000000,
+            maxFileSize: 10000000
           },
           (error: any, result: any) => {
             if (!error && result && result.event === 'success') {
@@ -258,37 +305,90 @@ const SlideAddModal: React.FC<SlideAddModalProps> = ({ isOpen, onClose, onSucces
             }
           }
         )
+
+        if (!widget) {
+          console.error('Cloudinary 위젯 생성에 실패했습니다. 설정을 확인해주세요.')
+          return
+        }
+
+        widgetRef.current = widget
+      } catch (error) {
+        console.error('Cloudinary 위젯 생성 중 오류:', error)
       }
     }
-
     if (window.cloudinary) {
-      initWidget()
-    } else {
-      const checkCloudinary = setInterval(() => {
-        if (window.cloudinary) {
-          initWidget()
-          clearInterval(checkCloudinary)
-        }
-      }, 100)
-      setTimeout(() => clearInterval(checkCloudinary), 5000)
+      createWidget()
+      return
     }
-  }, [])
+
+    const scriptSelector = 'script[data-cloudinary-widget="true"]'
+    let scriptEl = document.querySelector<HTMLScriptElement>(scriptSelector)
+
+    const handleScriptLoad = () => {
+      createWidget()
+    }
+
+    if (!scriptEl) {
+      scriptEl = document.createElement('script')
+      scriptEl.src = 'https://upload-widget.cloudinary.com/global/all.js'
+      scriptEl.async = true
+      scriptEl.dataset.cloudinaryWidget = 'true'
+      scriptEl.addEventListener('load', handleScriptLoad)
+      scriptEl.addEventListener('error', () => {
+        console.error('Cloudinary 스크립트를 불러오지 못했습니다.')
+      })
+      document.body.appendChild(scriptEl)
+    } else {
+      scriptEl.addEventListener('load', handleScriptLoad)
+    }
+
+    const checkInterval = window.setInterval(() => {
+      if (window.cloudinary) {
+        createWidget()
+        window.clearInterval(checkInterval)
+      }
+    }, 150)
+
+    const timeoutId = window.setTimeout(() => {
+      window.clearInterval(checkInterval)
+    }, 6000)
+
+    return () => {
+      scriptEl?.removeEventListener('load', handleScriptLoad)
+      window.clearInterval(checkInterval)
+      window.clearTimeout(timeoutId)
+      if (!isOpen) {
+        widgetRef.current = null
+      }
+    }
+  }, [isOpen])
 
   const openUploadWidget = () => {
-    if (widgetRef.current) {
+    const cloudName = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME
+    const uploadPreset = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET
+
+    if (!cloudName || !uploadPreset) {
+      alert('이미지 업로드가 비활성화되어 있습니다. Cloudinary 설정을 확인해주세요.')
+      return
+    }
+
+    if (widgetRef.current && typeof widgetRef.current.open === 'function') {
       try {
         widgetRef.current.open()
       } catch (error) {
+        console.warn('Cloudinary 위젯 open 중 오류, 새 위젯을 생성합니다.', error)
+        widgetRef.current = null
         initNewWidget()
       }
     } else if (window.cloudinary) {
       initNewWidget()
     } else {
       alert('이미지 업로드 서비스를 불러올 수 없습니다. 페이지를 새로고침해주세요.')
-      if (!document.querySelector('script[src*="cloudinary"]')) {
+      if (!document.querySelector('script[data-cloudinary-widget="true"]')) {
         const script = document.createElement('script')
         script.src = 'https://upload-widget.cloudinary.com/global/all.js'
         script.async = true
+        script.dataset.cloudinaryWidget = 'true'
         script.onload = () => {
           setTimeout(() => {
             initNewWidget()
@@ -300,13 +400,21 @@ const SlideAddModal: React.FC<SlideAddModalProps> = ({ isOpen, onClose, onSucces
   }
   
   const initNewWidget = () => {
+    const cloudName = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME
+    const uploadPreset = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET
+
+    if (!cloudName || !uploadPreset) {
+      console.error('Cloudinary 설정이 없습니다. 위젯을 생성할 수 없습니다.')
+      return
+    }
+
     if (!window.cloudinary) return
     
     try {
       const widget = window.cloudinary.createUploadWidget(
         {
-          cloudName: import.meta.env.VITE_CLOUDINARY_CLOUD_NAME,
-          uploadPreset: import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET,
+          cloudName,
+          uploadPreset,
           cropping: true,
           croppingAspectRatio: 16 / 9,
           maxFiles: 1,
@@ -321,6 +429,12 @@ const SlideAddModal: React.FC<SlideAddModalProps> = ({ isOpen, onClose, onSucces
           }
         }
       )
+
+      if (!widget) {
+        console.error('Cloudinary 위젯 생성에 실패했습니다.')
+        return
+      }
+
       widgetRef.current = widget
       widget.open()
     } catch (error) {
@@ -377,13 +491,25 @@ const SlideAddModal: React.FC<SlideAddModalProps> = ({ isOpen, onClose, onSucces
   }
 
   const isFormValid = () => {
+    if (!formData.postingStart || !formData.postingEnd) {
+      return false
+    }
+    const startDate = new Date(formData.postingStart)
+    const endDate = new Date(formData.postingEnd)
+    if (isNaN(startDate.getTime()) || isNaN(endDate.getTime()) || startDate > endDate) {
+      return false
+    }
+
     if (formData.linkType === 'book') {
+      const hasBookSelection =
+        (formData.selectedBookId && formData.selectedBookId.trim() !== '') ||
+        (formData.linkUrl.trim().startsWith('/book/'))
+
       return (
         formData.title.trim() !== '' &&
         formData.subtitle.trim() !== '' &&
         formData.imageUrl.trim() !== '' &&
-        formData.bookCategory !== '' &&
-        formData.selectedBookId !== ''
+        hasBookSelection
       )
     }
     return (
@@ -398,44 +524,49 @@ const SlideAddModal: React.FC<SlideAddModalProps> = ({ isOpen, onClose, onSucces
     e.preventDefault()
     
     if (!isFormValid()) {
-      alert('필수 필드를 모두 입력해주세요.')
+      alert('필수 필드를 모두 입력하고 포스팅 기간을 올바르게 설정해주세요.')
+      return
+    }
+
+    const postingStartDate = formData.postingStart ? new Date(formData.postingStart) : null
+    const postingEndDate = formData.postingEnd ? new Date(formData.postingEnd) : null
+
+    if (postingStartDate && postingEndDate && postingStartDate > postingEndDate) {
+      alert('포스팅 시작일이 종료일보다 늦을 수 없습니다.')
       return
     }
 
     setLoading(true)
     
     try {
+      const baseSlideData = {
+        slideType: formData.slideType,
+        title: formData.title.trim(),
+        subtitle: formData.subtitle.trim(),
+        imageUrl: formData.imageUrl,
+        linkUrl: formData.linkUrl.trim(),
+        linkType: formData.linkType,
+        titleColor: formData.titleColor,
+        subtitleColor: formData.subtitleColor,
+        bookCategory: formData.linkType === 'book' ? (formData.bookCategory || null) : null,
+        selectedBookId: formData.linkType === 'book' ? (formData.selectedBookId || null) : null,
+        postingStart: startTimestamp,
+        postingEnd: endTimestamp,
+        isActive: shouldBeActive,
+        updatedAt: Timestamp.now()
+      }
+
       if (isEditMode && editSlide?.id) {
-        // 수정 모드
         const slideRef = doc(db, 'slides', editSlide.id)
-        await updateDoc(slideRef, {
-          slideType: formData.slideType,
-          title: formData.title.trim(),
-          subtitle: formData.subtitle.trim(),
-          imageUrl: formData.imageUrl,
-          linkUrl: formData.linkUrl.trim(),
-          linkType: formData.linkType,
-          titleColor: formData.titleColor,
-          subtitleColor: formData.subtitleColor,
-          updatedAt: Timestamp.now()
-        })
+        await updateDoc(slideRef, baseSlideData)
         alert('슬라이드가 성공적으로 수정되었습니다!')
       } else {
-        // 추가 모드
-        const maxOrder = Math.max(...(await getDocs(collection(db, 'slides'))).docs.map(doc => doc.data().order || 0), 0)
+        const slidesSnapshot = await getDocs(collection(db, 'slides'))
+        const maxOrder = Math.max(...slidesSnapshot.docs.map(doc => doc.data().order || 0), 0)
         const slideData = {
-          slideType: formData.slideType,
-          title: formData.title.trim(),
-          subtitle: formData.subtitle.trim(),
-          imageUrl: formData.imageUrl,
-          linkUrl: formData.linkUrl.trim(),
-          linkType: formData.linkType,
-          titleColor: formData.titleColor,
-          subtitleColor: formData.subtitleColor,
+          ...baseSlideData,
           order: maxOrder + 1,
-          isActive: true, // 새로 추가된 슬라이드는 기본적으로 활성화
-          createdAt: Timestamp.now(),
-          updatedAt: Timestamp.now()
+          createdAt: Timestamp.now()
         }
         await addDoc(collection(db, 'slides'), slideData)
         alert('슬라이드가 성공적으로 추가되었습니다!')
@@ -471,7 +602,9 @@ const SlideAddModal: React.FC<SlideAddModalProps> = ({ isOpen, onClose, onSucces
       bookCategory: '',
       selectedBookId: '',
       titleColor: '#FFFFFF',
-      subtitleColor: '#FFFFFF'
+      subtitleColor: '#FFFFFF',
+      postingStart: '',
+      postingEnd: ''
     }
     setFormData(defaultData)
     setImagePreview(null)
@@ -502,7 +635,7 @@ const SlideAddModal: React.FC<SlideAddModalProps> = ({ isOpen, onClose, onSucces
       <div className="slide-modal-layout" onClick={(e) => e.stopPropagation()}>
         <div className="slide-modal-header">
           <h2>{isEditMode ? '슬라이드 수정' : '새 슬라이드 추가'}</h2>
-          <button className="slide-modal-close" onClick={handleClose}>
+          <button type="button" className="slide-modal-close" onClick={handleClose}>
             ×
           </button>
         </div>
@@ -608,6 +741,30 @@ const SlideAddModal: React.FC<SlideAddModalProps> = ({ isOpen, onClose, onSucces
               </select>
             </div>
           )}
+
+          {/* 6. 포스팅 기간 */}
+          <div className="slide-form-row-inline-label posting-period-row">
+            <label htmlFor="postingStart">포스팅 기간</label>
+            <div className="posting-period-inputs">
+              <input
+                type="date"
+                id="postingStart"
+                name="postingStart"
+                value={formData.postingStart}
+                onChange={handleInputChange}
+                required
+              />
+              <span className="posting-period-separator">~</span>
+              <input
+                type="date"
+                id="postingEnd"
+                name="postingEnd"
+                value={formData.postingEnd}
+                onChange={handleInputChange}
+                required
+              />
+            </div>
+          </div>
 
           {/* 7. 링크 URL (링크 타입이 'custom'일 때만 표시) */}
           {formData.linkType === 'custom' && (

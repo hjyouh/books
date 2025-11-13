@@ -94,6 +94,11 @@ button:focus-visible {
   overflow-x: hidden; /* 가로 스크롤 숨김 */
 }
 
+/* 모바일 뷰포트일 때 배경색 변경 */
+#root:has(.mobile-viewport) {
+  background: rgba(0, 0, 0, 0.5) !important;
+}
+
 * {
   box-sizing: border-box;
 }

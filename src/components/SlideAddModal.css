@@ -14,8 +14,8 @@
 .slide-modal-layout {
   background: white;
   border-radius: 12px;
-  width: 90%;
-  max-width: 800px;
+  width: 66%;
+  max-width: 680px;
   max-height: 95vh;
   overflow-y: auto;
   display: flex;
@@ -60,10 +60,10 @@
 }
 
 .slide-modal-form {
-  padding: 16px 24px;
+  padding: 8px 14px 10px;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 6px;
 }
 
 .slide-form-row {
@@ -84,26 +84,65 @@
   display: flex;
   flex-direction: row;
   align-items: center;
-  gap: 12px;
-  margin-bottom: 10px;
+  gap: 8px;
+  margin-bottom: 6px;
 }
 
 .slide-form-row-inline-label label {
-  min-width: 100px;
-  font-size: 0.9rem;
+  min-width: 88px;
+  font-size: 0.82rem;
   font-weight: 500;
   color: #333;
   text-align: left;
   flex-shrink: 0;
 }
 
+.posting-period-row label {
+  align-self: flex-start;
+  padding-top: 6px;
+}
+
+.posting-period-inputs {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+}
+
+.posting-period-inputs input {
+  flex: 1;
+  min-width: 0;
+  padding: 6px 10px;
+  border: 1px solid #d0d0d0;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  background-color: #f8f9fa;
+  transition: border-color 0.2s ease;
+  cursor: text;
+}
+
+.posting-period-inputs input::-webkit-calendar-picker-indicator {
+  cursor: pointer;
+}
+
+.posting-period-inputs input:focus {
+  outline: none;
+  border-color: #acc4ff;
+  background-color: white;
+}
+
+.posting-period-separator {
+  color: #666;
+  font-weight: 500;
+}
+
 .slide-form-row-inline-label input,
 .slide-form-row-inline-label select {
   flex: 1;
-  padding: 10px 14px;
+  padding: 8px 12px;
   border: 1px solid #d0d0d0;
   border-radius: 6px;
-  font-size: 0.9rem;
+  font-size: 0.85rem;
   background-color: #f8f9fa;
   transition: border-color 0.2s ease;
 }
@@ -132,10 +171,10 @@
 .slide-form-row select,
 .slide-form-field input,
 .slide-form-field select {
-  padding: 10px 14px;
+  padding: 8px 12px;
   border: 1px solid #d0d0d0;
   border-radius: 6px;
-  font-size: 0.9rem;
+  font-size: 0.85rem;
   background-color: #f8f9fa;
   transition: border-color 0.2s ease;
 }
@@ -158,13 +197,13 @@
 }
 
 .color-picker-circle {
-  width: 45px;
-  height: 45px;
+  width: 22px;
+  height: 22px;
   border-radius: 50%;
   border: 2px solid #d0d0d0;
   cursor: pointer;
   transition: all 0.2s ease;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
   flex-shrink: 0;
 }
 
@@ -209,7 +248,8 @@
 .slide-image-upload-area {
   position: relative;
   width: 100%;
-  aspect-ratio: 16 / 9; /* 16:9 비율 유지 */
+  max-width: 440px;
+  aspect-ratio: 16 / 9;
   border: 2px dashed #d0d0d0;
   border-radius: 8px;
   display: flex;
@@ -217,11 +257,16 @@
   justify-content: center;
   background: #f8f9fa;
   overflow: hidden;
+  align-self: center;
 }
 
 .slide-upload-btn {
-  width: 60px;
-  height: 60px;
+  width: 48px;
+  height: 48px;
+.posting-period-inputs input::-webkit-calendar-picker-indicator {
+  cursor: pointer;
+}
+
   border-radius: 50%; /* 정확한 원 모양 */
   background: transparent;
   color: #333;
@@ -293,8 +338,8 @@
 
 .slide-change-btn,
 .slide-delete-img-btn {
-  width: 45px;
-  height: 45px;
+  width: 40px;
+  height: 40px;
   border-radius: 50%;
   background: rgba(255, 255, 255, 0.95);
   border: 3px solid #667eea;

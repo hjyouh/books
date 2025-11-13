@@ -3,6 +3,44 @@ import { collection, query, where, getDocs, Timestamp, doc, setDoc } from 'fireb
 import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
 import { db, auth } from '../firebase';
 
+declare global {
+  interface Window {
+    daum?: {
+      Postcode: new (config: { oncomplete: (data: any) => void }) => { open: () => void };
+    };
+  }
+}
+
+const loadDaumPostcodeScript = (): Promise<void> => {
+  if (typeof window === 'undefined') {
+    return Promise.reject(new Error('Window is not defined'));
+  }
+
+  if (window.daum?.Postcode) {
+    return Promise.resolve();
+  }
+
+  return new Promise((resolve, reject) => {
+    const existingScript = document.querySelector('script[data-daum-postcode="true"]');
+    if (existingScript) {
+      existingScript.addEventListener('load', () => resolve(), { once: true });
+      existingScript.addEventListener('error', () => reject(new Error('Daum postcode script failed to load')), {
+        once: true,
+      });
+      return;
+    }
+
+    const script = document.createElement('script');
+    script.src = '//t1.daumcdn.net/mapjsapi/bundle/postcode/prod/postcode.v2.js';
+    script.async = true;
+    script.defer = true;
+    script.dataset.daumPostcode = 'true';
+    script.onload = () => resolve();
+    script.onerror = () => reject(new Error('Daum postcode script failed to load'));
+    document.body.appendChild(script);
+  });
+};
+
 interface FormData {
   id: string;
   password: string;
@@ -60,6 +98,7 @@ const NewSignupModal: React.FC<NewSignupModalProps> = ({ isOpen, onClose, onSucc
     blog: { isValid: false, isChecking: false },
     instagram: { isValid: false, isChecking: false }
   });
+  const [isAddressConfirmed, setIsAddressConfirmed] = useState(false);
 
   // 모달이 열릴 때 폼 초기화
   useEffect(() => {
@@ -89,6 +128,9 @@ const NewSignupModal: React.FC<NewSignupModalProps> = ({ isOpen, onClose, onSucc
         ...prev,
         [name]: { isValid: false, isChecking: false }
       }));
+    }
+    if (name === 'address') {
+      setIsAddressConfirmed(false);
     }
     
     if (errors[name as keyof FormData]) {
@@ -120,6 +162,7 @@ const NewSignupModal: React.FC<NewSignupModalProps> = ({ isOpen, onClose, onSucc
       blog: { isValid: false, isChecking: false },
       instagram: { isValid: false, isChecking: false }
     });
+    setIsAddressConfirmed(false);
   };
 
   const checkIdDuplicate = async (id: string): Promise<boolean> => {
@@ -149,12 +192,22 @@ const NewSignupModal: React.FC<NewSignupModalProps> = ({ isOpen, onClose, onSucc
   const validateForm = (): boolean => {
     const newErrors: Partial<FormData> = {};
 
-    if (!formData.id.trim()) newErrors.id = 'ID를 입력해주세요';
+    const trimmedId = formData.id.trim();
+    if (!trimmedId) {
+      newErrors.id = 'ID를 입력해주세요';
+    } else if (trimmedId.length < 6) {
+      newErrors.id = 'ID를 6자 이상으로 입력해 주세요';
+    }
     if (!formData.password.trim()) newErrors.password = '비밀번호를 입력해주세요';
     if (!formData.confirmPassword.trim()) newErrors.confirmPassword = '비밀번호 확인을 입력해주세요';
     if (!formData.name.trim()) newErrors.name = '이름을 입력해주세요';
     if (!formData.nickname.trim()) newErrors.nickname = '닉네임을 입력해주세요';
-    if (!formData.phone.trim()) newErrors.phone = '휴대폰 번호를 입력해주세요';
+    const phoneRegex = /^010-\d{4}-\d{4}$/;
+    if (!formData.phone.trim()) {
+      newErrors.phone = '휴대폰 번호를 입력해주세요';
+    } else if (!phoneRegex.test(formData.phone.trim())) {
+      newErrors.phone = '010-0000-0000 형식으로 입력해 주세요';
+    }
     if (!formData.email.trim()) newErrors.email = '이메일을 입력해주세요';
     if (!formData.address.trim()) newErrors.address = '주소를 입력해주세요';
 
@@ -177,11 +230,6 @@ const NewSignupModal: React.FC<NewSignupModalProps> = ({ isOpen, onClose, onSucc
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (formData.email && !emailRegex.test(formData.email)) {
       newErrors.email = '올바른 이메일 형식을 입력해주세요';
-    }
-
-    const phoneRegex = /^010-\d{4}-\d{4}$/;
-    if (formData.phone && !phoneRegex.test(formData.phone)) {
-      newErrors.phone = '올바른 휴대폰 번호 형식을 입력해주세요 (010-0000-0000)';
     }
 
     setErrors(newErrors);
@@ -268,21 +316,23 @@ const NewSignupModal: React.FC<NewSignupModalProps> = ({ isOpen, onClose, onSucc
   };
 
   const handleDuplicateCheck = async () => {
-    if (!formData.id.trim()) {
+    const trimmedId = formData.id.trim();
+    if (!trimmedId) {
       alert('ID를 입력해주세요');
       return;
     }
 
-    const idRegex = /^[a-zA-Z0-9]{4,20}$/;
-    if (!idRegex.test(formData.id)) {
-      alert('ID는 영문과 숫자만 사용 가능하며, 4-20자여야 합니다.');
+    const idRegex = /^[a-zA-Z0-9]{6,20}$/;
+    if (!idRegex.test(trimmedId)) {
+      alert('ID는 영문과 숫자만 사용 가능하며, 6-20자여야 합니다.');
       return;
     }
 
     try {
-      const isAvailable = await checkIdDuplicate(formData.id);
+      const isAvailable = await checkIdDuplicate(trimmedId);
       if (isAvailable) {
         setIsIdChecked(true);
+        setErrors(prev => ({ ...prev, id: '' }));
         alert('사용 가능한 ID입니다');
       } else {
         setIsIdChecked(false);
@@ -310,6 +360,7 @@ const NewSignupModal: React.FC<NewSignupModalProps> = ({ isOpen, onClose, onSucc
       const isAvailable = await checkEmailDuplicate(formData.email);
       if (isAvailable) {
         setIsEmailChecked(true);
+        setErrors(prev => ({ ...prev, email: '' }));
         alert('사용 가능한 이메일입니다');
       } else {
         setIsEmailChecked(false);
@@ -328,17 +379,49 @@ const NewSignupModal: React.FC<NewSignupModalProps> = ({ isOpen, onClose, onSucc
     }
 
     const phoneRegex = /^010-\d{4}-\d{4}$/;
-    if (!phoneRegex.test(formData.phone)) {
-      alert('올바른 휴대폰 번호 형식을 입력해주세요 (010-0000-0000)');
+    if (!phoneRegex.test(formData.phone.trim())) {
+      alert('010-0000-0000 형식으로 입력해 주세요');
       return;
     }
 
-    alert('인증번호가 발송되었습니다');
+    alert('번호 확인이 완료되었습니다.');
     setIsPhoneVerified(true);
+    setErrors(prev => ({ ...prev, phone: '' }));
   };
 
-  const handleAddressSearch = () => {
-    alert('주소 찾기 기능입니다');
+  const handleAddressSearch = async () => {
+    try {
+      await loadDaumPostcodeScript();
+
+      if (!window.daum?.Postcode) {
+        throw new Error('Daum Postcode script is unavailable.');
+      }
+
+      new window.daum.Postcode({
+        oncomplete: (data: any) => {
+          const roadAddress = data.roadAddress || '';
+          const jibunAddress = data.jibunAddress || '';
+          const buildingName = data.buildingName ? ` ${data.buildingName}` : '';
+
+          const selectedAddress = roadAddress || jibunAddress;
+
+          if (!selectedAddress) {
+            alert('선택한 주소 정보를 가져오지 못했습니다. 다시 시도해주세요.');
+            return;
+          }
+
+          setFormData((prev) => ({
+            ...prev,
+            address: `${selectedAddress}${buildingName}`.trim(),
+          }));
+          setIsAddressConfirmed(true);
+          setErrors(prev => ({ ...prev, address: '' }));
+        },
+      }).open();
+    } catch (error) {
+      console.error('주소 검색 오류:', error);
+      alert('주소 검색 중 문제가 발생했습니다. 잠시 후 다시 시도해주세요.');
+    }
   };
 
   // URL 형식 검증 함수
@@ -460,6 +543,7 @@ const NewSignupModal: React.FC<NewSignupModalProps> = ({ isOpen, onClose, onSucc
       isIdChecked &&
       isEmailChecked &&
       isPhoneVerified &&
+      isAddressConfirmed &&
       Object.keys(errors).length === 0
     );
   };
@@ -507,11 +591,11 @@ const NewSignupModal: React.FC<NewSignupModalProps> = ({ isOpen, onClose, onSucc
     }
   };
 
-  const getAddressButtonStyle = () => {
+  const getAddressButtonStyle = (confirmed: boolean) => {
     return {
-      backgroundColor: 'white',
-      color: '#4a5568',
-      border: '2px solid #e2e8f0',
+      backgroundColor: confirmed ? '#667eea' : 'white',
+      color: confirmed ? '#ffffff' : '#4a5568',
+      border: confirmed ? '2px solid #667eea' : '2px solid #e2e8f0',
       padding: '10px 12px',
       borderRadius: '6px',
       fontSize: '12px',
@@ -534,7 +618,7 @@ const NewSignupModal: React.FC<NewSignupModalProps> = ({ isOpen, onClose, onSucc
         background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
         color: 'white',
         border: '2px solid #667eea',
-        padding: '0 28px',
+        padding: '0 20px',
         borderRadius: '8px',
         fontSize: '16px',
         fontWeight: '600',
@@ -546,14 +630,15 @@ const NewSignupModal: React.FC<NewSignupModalProps> = ({ isOpen, onClose, onSucc
         boxShadow: '0 8px 25px rgba(102, 126, 234, 0.4)',
         display: 'flex',
         alignItems: 'center',
-        justifyContent: 'center'
+        justifyContent: 'center',
+        whiteSpace: 'nowrap'
       };
     } else {
       return {
         backgroundColor: 'white',
         color: '#4a5568',
         border: '2px solid #e2e8f0',
-        padding: '0 28px',
+        padding: '0 20px',
         borderRadius: '8px',
         fontSize: '16px',
         fontWeight: '600',
@@ -565,7 +650,8 @@ const NewSignupModal: React.FC<NewSignupModalProps> = ({ isOpen, onClose, onSucc
         boxShadow: 'none',
         display: 'flex',
         alignItems: 'center',
-        justifyContent: 'center'
+        justifyContent: 'center',
+        whiteSpace: 'nowrap'
       };
     }
   };
@@ -636,7 +722,7 @@ const NewSignupModal: React.FC<NewSignupModalProps> = ({ isOpen, onClose, onSucc
               name="id"
               value={formData.id}
               onChange={handleInputChange}
-              placeholder="ID를 입력하세요"
+              placeholder="ID를 6자 이상으로 입력해 주세요"
               style={{
                 flex: 1,
                 padding: '10px 12px',
@@ -770,7 +856,7 @@ const NewSignupModal: React.FC<NewSignupModalProps> = ({ isOpen, onClose, onSucc
               name="phone"
               value={formData.phone}
               onChange={handleInputChange}
-              placeholder="010-0000-0000"
+              placeholder="010-0000-0000 형식으로 입력해 주세요"
               style={{
                 flex: 1,
                 padding: '10px 12px',
@@ -787,7 +873,7 @@ const NewSignupModal: React.FC<NewSignupModalProps> = ({ isOpen, onClose, onSucc
               style={getButtonStyle('default', isPhoneVerified)}
               onClick={handlePhoneAuth}
             >
-              {isPhoneVerified ? '✓ 인증완료' : '인증'}
+              {isPhoneVerified ? '✓ 번호 확인됨' : '번호 확인'}
             </button>
           </div>
           {errors.phone && <div style={{ color: '#e53e3e', fontSize: '12px', marginBottom: '10px', marginLeft: '72px' }}>{errors.phone}</div>}
@@ -849,7 +935,7 @@ const NewSignupModal: React.FC<NewSignupModalProps> = ({ isOpen, onClose, onSucc
             />
             <button 
               type="button" 
-              style={getAddressButtonStyle()}
+              style={getAddressButtonStyle(isAddressConfirmed)}
               onClick={handleAddressSearch}
             >
               주소찾기

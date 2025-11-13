@@ -59,6 +59,8 @@ interface SlideData {
   updatedAt?: any;
   titleColor?: string; // 제목 색상
   subtitleColor?: string; // 부제목 색상
+  postingStart?: Timestamp | null;
+  postingEnd?: Timestamp | null;
 }
 
 interface ReviewApplicationData {
@@ -201,8 +203,56 @@ const AdminPage: React.FC = () => {
         id: doc.id,
         ...doc.data()
       })) as SlideData[]
+
+      const nowMs = Date.now()
+      const toMs = (value: any): number | null => {
+        if (!value) return null
+        try {
+          if (value.toDate) {
+            return value.toDate().getTime()
+          }
+          if (value.seconds) {
+            return value.seconds * 1000
+          }
+          if (value instanceof Date) {
+            return value.getTime()
+          }
+          if (typeof value === 'string') {
+            const parsed = Date.parse(value)
+            return isNaN(parsed) ? null : parsed
+          }
+        } catch (error) {
+          console.error('포스팅 기간 변환 오류:', error)
+        }
+        return null
+      }
+
+      const updatePromises: Promise<void>[] = []
+      const normalizedSlides = slidesData.map(slide => {
+        const endMs = toMs(slide.postingEnd)
+        const shouldBeActive = endMs === null || endMs >= nowMs
+
+        if (typeof slide.isActive === 'boolean' && slide.isActive !== shouldBeActive) {
+          updatePromises.push(
+            updateDoc(doc(db, 'slides', slide.id), {
+              isActive: shouldBeActive,
+              updatedAt: Timestamp.now()
+            }).catch(error => console.error('슬라이드 상태 자동 업데이트 오류:', error))
+          )
+          return {
+            ...slide,
+            isActive: shouldBeActive
+          }
+        }
+
+        return slide
+      })
+
+      if (updatePromises.length > 0) {
+        await Promise.all(updatePromises)
+      }
       
-      setSlides(slidesData)
+      setSlides(normalizedSlides)
     } catch (error) {
       console.error('슬라이드 데이터 가져오기 오류:', error)
     } finally {
@@ -413,6 +463,51 @@ const AdminPage: React.FC = () => {
 
   const handleBookUpdate = () => {
     fetchBooks() // 도서 목록 새로고침
+  }
+
+  const formatPostingDate = (value: any): string => {
+    if (!value) return ''
+    try {
+      let date: Date | null = null
+      if (value.toDate) {
+        date = value.toDate()
+      } else if (value.seconds) {
+        date = new Date(value.seconds * 1000)
+      } else if (value instanceof Date) {
+        date = value
+      } else if (typeof value === 'string') {
+        const parsed = Date.parse(value)
+        if (!isNaN(parsed)) {
+          date = new Date(parsed)
+        }
+      }
+      if (!date) return ''
+      const year = String(date.getFullYear()).slice(-2)
+      const month = String(date.getMonth() + 1).padStart(2, '0')
+      const day = String(date.getDate()).padStart(2, '0')
+      return `${year}/${month}/${day}`
+    } catch (error) {
+      console.error('포스팅 기간 표시 오류:', error)
+      return ''
+    }
+  }
+
+  const renderPostingPeriod = (slide: SlideData) => {
+    const start = formatPostingDate(slide.postingStart)
+    const end = formatPostingDate(slide.postingEnd)
+    if (!start && !end) {
+      return (
+        <div className="slide-posting-period">
+          <span>기간 미등록</span>
+        </div>
+      )
+    }
+    return (
+      <div className="slide-posting-period">
+        <span>{start || '--/--/--'}</span>
+        <span>{end || '--/--/--'}</span>
+      </div>
+    )
   }
 
   // 슬라이드 관련 함수들
@@ -976,49 +1071,56 @@ const AdminPage: React.FC = () => {
                           />
                           <span className="toggle-slider">활성</span>
                         </label>
-                        <button 
-                          className="slide-edit-icon-bottom"
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            setSelectedSlide(slide)
-                            setIsSlideEditModalOpen(true)
-                          }}
-                          title="편집"
-                        >
-                          ✏️
-                        </button>
-                        <button 
-                          className="slide-move-btn"
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            moveSlideUp(slide.id, 'main')
-                          }}
-                          disabled={index === 0}
-                          title="위로 이동"
-                        >
-                          ↑
-                        </button>
-                        <button 
-                          className="slide-move-btn"
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            moveSlideDown(slide.id, 'main')
-                          }}
-                          disabled={index === activeSlides.length - 1}
-                          title="아래로 이동"
-                        >
-                          ↓
-                        </button>
-                        <button 
-                          className="slide-delete-btn"
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            handleDeleteSlide(slide.id)
-                          }}
-                          title="삭제"
-                        >
-                          🗑️
-                        </button>
+                        {renderPostingPeriod(slide)}
+                        <div className="slide-action-buttons">
+                          <button 
+                            type="button"
+                            className="slide-edit-icon-bottom"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              setSelectedSlide(slide)
+                              setIsSlideEditModalOpen(true)
+                            }}
+                            title="편집"
+                          >
+                            ✏️
+                          </button>
+                          <button 
+                            type="button"
+                            className="slide-move-btn"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              moveSlideUp(slide.id, 'main')
+                            }}
+                            disabled={index === 0}
+                            title="왼쪽으로 이동"
+                          >
+                            ←
+                          </button>
+                          <button 
+                            type="button"
+                            className="slide-move-btn"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              moveSlideDown(slide.id, 'main')
+                            }}
+                            disabled={index === activeSlides.length - 1}
+                            title="오른쪽으로 이동"
+                          >
+                            →
+                          </button>
+                          <button 
+                            type="button"
+                            className="slide-delete-btn"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              handleDeleteSlide(slide.id)
+                            }}
+                            title="삭제"
+                          >
+                            🗑️
+                          </button>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -1084,7 +1186,7 @@ const AdminPage: React.FC = () => {
                       </div>
                       <div className="slide-actions">
                         <div className="slide-controls">
-                          <label className="toggle-switch">
+                          <label className="toggle-switch inactive">
                             <input
                               type="checkbox"
                               checked={slide.isActive}
@@ -1092,27 +1194,32 @@ const AdminPage: React.FC = () => {
                             />
                             <span className="toggle-slider">비활성</span>
                           </label>
-                          <button 
-                            className="slide-edit-icon-bottom"
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              setSelectedSlide(slide)
-                              setIsSlideEditModalOpen(true)
-                            }}
-                            title="편집"
-                          >
-                            ✏️
-                          </button>
-                          <button 
-                            className="slide-delete-btn"
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              handleDeleteSlide(slide.id)
-                            }}
-                            title="삭제"
-                          >
-                            🗑️
-                          </button>
+                          {renderPostingPeriod(slide)}
+                          <div className="slide-action-buttons">
+                            <button 
+                              type="button"
+                              className="slide-edit-icon-bottom"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                setSelectedSlide(slide)
+                                setIsSlideEditModalOpen(true)
+                              }}
+                              title="편집"
+                            >
+                              ✏️
+                            </button>
+                            <button 
+                              type="button"
+                              className="slide-delete-btn"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                handleDeleteSlide(slide.id)
+                              }}
+                              title="삭제"
+                            >
+                              🗑️
+                            </button>
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -1361,49 +1468,56 @@ const AdminPage: React.FC = () => {
                           />
                           <span className="toggle-slider">활성</span>
                         </label>
-                        <button 
-                          className="slide-edit-icon-bottom"
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            setSelectedSlide(slide)
-                            setIsSlideEditModalOpen(true)
-                          }}
-                          title="편집"
-                        >
-                          ✏️
-                        </button>
-                        <button 
-                          className="slide-move-btn"
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            moveSlideUp(slide.id, 'ad')
-                          }}
-                          disabled={index === 0}
-                          title="위로 이동"
-                        >
-                          ↑
-                        </button>
-                        <button 
-                          className="slide-move-btn"
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            moveSlideDown(slide.id, 'ad')
-                          }}
-                          disabled={index === activeAdSlides.length - 1}
-                          title="아래로 이동"
-                        >
-                          ↓
-                        </button>
-                        <button 
-                          className="slide-delete-btn"
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            handleDeleteSlide(slide.id)
-                          }}
-                          title="삭제"
-                        >
-                          🗑️
-                        </button>
+                        {renderPostingPeriod(slide)}
+                        <div className="slide-action-buttons">
+                          <button 
+                            type="button"
+                            className="slide-edit-icon-bottom"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              setSelectedSlide(slide)
+                              setIsSlideEditModalOpen(true)
+                            }}
+                            title="편집"
+                          >
+                            ✏️
+                          </button>
+                          <button 
+                            type="button"
+                            className="slide-move-btn"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              moveSlideUp(slide.id, 'ad')
+                            }}
+                            disabled={index === 0}
+                            title="왼쪽으로 이동"
+                          >
+                            ←
+                          </button>
+                          <button 
+                            type="button"
+                            className="slide-move-btn"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              moveSlideDown(slide.id, 'ad')
+                            }}
+                            disabled={index === activeAdSlides.length - 1}
+                            title="오른쪽으로 이동"
+                          >
+                            →
+                          </button>
+                          <button 
+                            type="button"
+                            className="slide-delete-btn"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              handleDeleteSlide(slide.id)
+                            }}
+                            title="삭제"
+                          >
+                            🗑️
+                          </button>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -1469,7 +1583,7 @@ const AdminPage: React.FC = () => {
                       </div>
                       <div className="slide-actions">
                         <div className="slide-controls">
-                          <label className="toggle-switch">
+                          <label className="toggle-switch inactive">
                             <input
                               type="checkbox"
                               checked={slide.isActive}
@@ -1477,27 +1591,32 @@ const AdminPage: React.FC = () => {
                             />
                             <span className="toggle-slider">비활성</span>
                           </label>
-                          <button 
-                            className="slide-edit-icon-bottom"
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              setSelectedSlide(slide)
-                              setIsSlideEditModalOpen(true)
-                            }}
-                            title="편집"
-                          >
-                            ✏️
-                          </button>
-                          <button 
-                            className="slide-delete-btn"
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              handleDeleteSlide(slide.id)
-                            }}
-                            title="삭제"
-                          >
-                            🗑️
-                          </button>
+                          {renderPostingPeriod(slide)}
+                          <div className="slide-action-buttons">
+                            <button 
+                              type="button"
+                              className="slide-edit-icon-bottom"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                setSelectedSlide(slide)
+                                setIsSlideEditModalOpen(true)
+                              }}
+                              title="편집"
+                            >
+                              ✏️
+                            </button>
+                            <button 
+                              type="button"
+                              className="slide-delete-btn"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                handleDeleteSlide(slide.id)
+                              }}
+                              title="삭제"
+                            >
+                              🗑️
+                            </button>
+                          </div>
                         </div>
                       </div>
                     </div>

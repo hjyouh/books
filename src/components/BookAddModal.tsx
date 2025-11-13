@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { collection, addDoc, doc, updateDoc, Timestamp } from 'firebase/firestore'
 import { db } from '../firebase'
-import CloudinaryUploadWidget from './CloudinaryUploadWidget'
 import './BookAddModal.css'
 
 interface BookData {
@@ -14,6 +13,9 @@ interface BookData {
   publishedDate?: string
   description?: string
   imageUrl?: string
+  postingStart?: string
+  postingEnd?: string
+  purchaseUrl?: string
 }
 
 interface BookAddModalProps {
@@ -32,6 +34,9 @@ interface BookFormData {
   publishedDate: string
   description: string
   coverImageUrl: string
+  postingStart: string
+  postingEnd: string
+  purchaseUrl: string
 }
 
 const BookAddModal: React.FC<BookAddModalProps> = ({ isOpen, onClose, onSuccess, editBook }) => {
@@ -43,13 +48,29 @@ const BookAddModal: React.FC<BookAddModalProps> = ({ isOpen, onClose, onSuccess,
     publisher: '',
     publishedDate: '',
     description: '',
-    coverImageUrl: ''
+    coverImageUrl: '',
+    postingStart: '',
+    postingEnd: '',
+    purchaseUrl: ''
   })
   const [loading, setLoading] = useState(false)
   const [imagePreview, setImagePreview] = useState<string | null>(null)
   const [hasChanges, setHasChanges] = useState(false) // 필드 변경 감지
   const [initialData, setInitialData] = useState<BookFormData | null>(null) // 초기 데이터 저장
   const widgetRef = React.useRef<any>(null)
+  const editorRef = React.useRef<HTMLDivElement | null>(null)
+  const [isEditorFullscreen, setIsEditorFullscreen] = useState<boolean>(false)
+  const [dateError, setDateError] = useState<string>('')
+  const fontFamilies = ['SUIT', 'Segoe UI', 'Pretendard', 'Noto Sans KR', 'Nanum Gothic', 'Arial', 'Georgia']
+  const fontSizes = [
+    { label: '10pt', cmd: '2' },
+    { label: '12pt', cmd: '3' },
+    { label: '14pt', cmd: '4' },
+    { label: '18pt', cmd: '5' },
+    { label: '24pt', cmd: '6' }
+  ]
+  const [selectedFont, setSelectedFont] = useState<string>(fontFamilies[0])
+  const [selectedFontSize, setSelectedFontSize] = useState<string>(fontSizes[2].cmd)
   
   const isEditMode = !!editBook
 
@@ -64,11 +85,15 @@ const BookAddModal: React.FC<BookAddModalProps> = ({ isOpen, onClose, onSuccess,
         publisher: editBook.publisher || '',
         publishedDate: editBook.publishedDate || '',
         description: editBook.description || '',
-        coverImageUrl: editBook.imageUrl || ''
+        coverImageUrl: editBook.imageUrl || '',
+        postingStart: editBook.postingStart || '',
+        postingEnd: editBook.postingEnd || '',
+        purchaseUrl: editBook.purchaseUrl || ''
       }
       setFormData(initialFormData)
       setInitialData(initialFormData)
       setImagePreview(editBook.imageUrl || null)
+      setEditorContent(initialFormData.description)
       setHasChanges(false)
     } else if (!isEditMode && isOpen) {
       // 추가 모드일 때 폼 초기화
@@ -83,6 +108,24 @@ const BookAddModal: React.FC<BookAddModalProps> = ({ isOpen, onClose, onSuccess,
       setHasChanges(changed)
     }
   }, [formData, initialData, isEditMode])
+
+  useEffect(() => {
+    if (isOpen && editorRef.current) {
+      editorRef.current.innerHTML = formData.description || ''
+    }
+  }, [isOpen, editBook])
+
+  useEffect(() => {
+    if (formData.postingStart && formData.postingEnd) {
+      if (formData.postingStart > formData.postingEnd) {
+        setDateError('포스팅 종료일은 시작일보다 빠를 수 없습니다.')
+      } else {
+        setDateError('')
+      }
+    } else {
+      setDateError('')
+    }
+  }, [formData.postingStart, formData.postingEnd])
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target
@@ -224,6 +267,59 @@ const BookAddModal: React.FC<BookAddModalProps> = ({ isOpen, onClose, onSuccess,
     setImagePreview(null)
   }
 
+  const handleEditorInput = () => {
+    if (!editorRef.current) return
+    const html = editorRef.current.innerHTML
+    setFormData(prev => {
+      if (prev.description === html) return prev
+      return {
+        ...prev,
+        description: html
+      }
+    })
+  }
+
+  const execEditorCommand = (command: string, value?: string) => {
+    editorRef.current?.focus()
+    document.execCommand(command, false, value)
+    handleEditorInput()
+  }
+
+  const handleFontChange = (family: string) => {
+    setSelectedFont(family)
+    execEditorCommand('fontName', family)
+  }
+
+  const handleFontSizeChange = (sizeCmd: string) => {
+    setSelectedFontSize(sizeCmd)
+    execEditorCommand('fontSize', sizeCmd)
+  }
+
+  const handleHighlight = (color: string) => {
+    execEditorCommand('hiliteColor', color)
+  }
+
+  const handleInsertLink = () => {
+    const url = prompt('링크 URL을 입력하세요')
+    if (url) {
+      execEditorCommand('createLink', url)
+    }
+  }
+
+  const handleInsertImage = () => {
+    const url = prompt('이미지 URL을 입력하세요')
+    if (url) {
+      execEditorCommand('insertImage', url)
+    }
+  }
+
+  const toggleEditorFullscreen = () => {
+    setIsEditorFullscreen(prev => !prev)
+    requestAnimationFrame(() => {
+      editorRef.current?.focus()
+    })
+  }
+
   // 필수 필드 검증 함수
   const isFormValid = () => {
     return (
@@ -232,7 +328,8 @@ const BookAddModal: React.FC<BookAddModalProps> = ({ isOpen, onClose, onSuccess,
       formData.author.trim() !== '' &&
       formData.genre.trim() !== '' &&
       formData.publisher.trim() !== '' &&
-      formData.publishedDate.trim() !== ''
+      formData.publishedDate.trim() !== '' &&
+      (!formData.postingStart || !formData.postingEnd || formData.postingStart <= formData.postingEnd)
     )
   }
 
@@ -257,8 +354,11 @@ const BookAddModal: React.FC<BookAddModalProps> = ({ isOpen, onClose, onSuccess,
           genre: formData.genre.trim(),
           publisher: formData.publisher.trim(),
           publishedDate: formData.publishedDate.trim(),
-          description: formData.description.trim(),
+          description: formData.description,
           imageUrl: formData.coverImageUrl,
+          postingStart: formData.postingStart,
+          postingEnd: formData.postingEnd,
+          purchaseUrl: formData.purchaseUrl.trim(),
           updatedAt: Timestamp.now()
         })
         console.log('도서가 성공적으로 수정되었습니다. ID:', editBook.id)
@@ -272,8 +372,11 @@ const BookAddModal: React.FC<BookAddModalProps> = ({ isOpen, onClose, onSuccess,
           genre: formData.genre.trim(),
           publisher: formData.publisher.trim(),
           publishedDate: formData.publishedDate.trim(),
-          description: formData.description.trim(),
+          description: formData.description,
           imageUrl: formData.coverImageUrl, // Cloudinary URL 사용
+          postingStart: formData.postingStart || null,
+          postingEnd: formData.postingEnd || null,
+          purchaseUrl: formData.purchaseUrl.trim() || null,
           createdAt: Timestamp.now(),
           updatedAt: Timestamp.now(),
           status: 'active', // 활성 상태
@@ -330,9 +433,13 @@ const BookAddModal: React.FC<BookAddModalProps> = ({ isOpen, onClose, onSuccess,
       publisher: '',
       publishedDate: '',
       description: '',
-      coverImageUrl: ''
+      coverImageUrl: '',
+      postingStart: '',
+      postingEnd: '',
+      purchaseUrl: ''
     })
     setImagePreview(null)
+    setEditorContent('')
   }
 
   const handleClose = () => {
@@ -367,44 +474,44 @@ const BookAddModal: React.FC<BookAddModalProps> = ({ isOpen, onClose, onSuccess,
         <div className="book-modal-content">
           {/* 좌측: 책 표지 영역 */}
           <div className="book-cover-section">
-            <div className="cover-controls">
-              {!imagePreview ? (
-                <button 
-                  type="button"
-                  className="cover-add-btn"
-                  onClick={openUploadWidget}
-                  disabled={loading}
-                  title="이미지 추가"
-                >
-                  +
-                </button>
-              ) : (
+            <div className="cover-preview-area">
+              {imagePreview ? (
                 <>
+                  <img src={imagePreview} alt="책 표지" className="cover-preview-image" />
+                  <div className="cover-action-overlay">
+                    <button 
+                      type="button"
+                      className="cover-change-btn"
+                      onClick={openUploadWidget}
+                      title="이미지 변경"
+                    >
+                      +
+                    </button>
+                    <button 
+                      type="button"
+                      className="cover-delete-btn"
+                      onClick={removeImage}
+                      title="이미지 삭제"
+                    >
+                      🗑️
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <div className="cover-placeholder">
+                  <div className="cover-placeholder-text">
+                    <span>책표지</span>
+                    <small>(3:4 사이즈로)</small>
+                  </div>
                   <button 
                     type="button"
-                    className="cover-change-btn"
+                    className="cover-add-btn"
                     onClick={openUploadWidget}
-                    title="이미지 변경"
+                    disabled={loading}
+                    title="이미지 추가"
                   >
                     +
                   </button>
-                  <button 
-                    type="button"
-                    className="cover-delete-btn"
-                    onClick={removeImage}
-                    title="이미지 삭제"
-                  >
-                    🗑️
-                  </button>
-                </>
-              )}
-            </div>
-            <div className="cover-preview-area">
-              {imagePreview ? (
-                <img src={imagePreview} alt="책 표지" className="cover-preview-image" />
-              ) : (
-                <div className="cover-placeholder">
-                  책표지
                 </div>
               )}
             </div>
@@ -503,20 +610,156 @@ const BookAddModal: React.FC<BookAddModalProps> = ({ isOpen, onClose, onSuccess,
                   name="publishedDate"
                   value={formData.publishedDate}
                   onChange={handleInputChange}
+                  className="form-input-inline form-date-input"
+                />
+              </div>
+
+              <div className="form-row">
+                <label htmlFor="purchaseUrl">구매 링크</label>
+                <input
+                  type="url"
+                  id="purchaseUrl"
+                  name="purchaseUrl"
+                  value={formData.purchaseUrl}
+                  onChange={handleInputChange}
+                  placeholder="https://example.com"
                   className="form-input-inline"
                 />
               </div>
 
-              <div className="form-row description-row">
-                <label htmlFor="description">도서 설명</label>
-                <textarea
-                  id="description"
-                  name="description"
-                  value={formData.description}
-                  onChange={handleInputChange}
-                  placeholder="도서에 대한 간단한 설명을 입력하세요"
-                  className="form-textarea-inline"
-                />
+              <div className="form-row posting-row">
+                <label>포스팅 기간</label>
+                <div className="posting-period-fields">
+                  <input
+                    type="date"
+                    name="postingStart"
+                    value={formData.postingStart}
+                    onChange={handleInputChange}
+                    className="form-input-inline form-date-input"
+                    placeholder="시작일"
+                  />
+                  <span className="posting-separator">~</span>
+                  <input
+                    type="date"
+                    name="postingEnd"
+                    value={formData.postingEnd}
+                    onChange={handleInputChange}
+                    className="form-input-inline form-date-input"
+                    placeholder="종료일"
+                  />
+                </div>
+              </div>
+              {dateError && <p className="posting-error">{dateError}</p>}
+
+              <div className={`form-row description-row ${isEditorFullscreen ? 'fullscreen' : ''}`}>
+                <div className="description-label-wrapper">
+                  <label htmlFor="description">도서 설명</label>
+                  <button
+                    type="button"
+                    className={`editor-expand-trigger ${isEditorFullscreen ? 'active' : ''}`}
+                    onClick={toggleEditorFullscreen}
+                    title={isEditorFullscreen ? '작게 보기' : '넓게 편집'}
+                  >
+                    ⛶
+                  </button>
+                </div>
+                {isEditorFullscreen && <div className="editor-backdrop" onClick={toggleEditorFullscreen} />}
+                <div className={`editor-container ${isEditorFullscreen ? 'fullscreen' : ''}`}>
+                  {isEditorFullscreen && (
+                    <button
+                      type="button"
+                      className="editor-close-btn"
+                      onClick={toggleEditorFullscreen}
+                      title="닫기"
+                    >
+                      ×
+                    </button>
+                  )}
+                  <div className="editor-toolbar">
+                    <button type="button" onClick={() => execEditorCommand('bold')} title="굵게(B)">
+                      B
+                    </button>
+                    <button type="button" onClick={() => execEditorCommand('italic')} title="기울임(I)">
+                      I
+                    </button>
+                    <button type="button" onClick={() => execEditorCommand('underline')} title="밑줄(U)">
+                      U
+                    </button>
+                    <div className="editor-select">
+                      <select value={selectedFont} onChange={(e) => handleFontChange(e.target.value)} title="글꼴">
+                        {fontFamilies.map(font => (
+                          <option key={font} value={font}>{font}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="editor-select">
+                      <select value={selectedFontSize} onChange={(e) => handleFontSizeChange(e.target.value)} title="글자 크기">
+                        {fontSizes.map(size => (
+                          <option key={size.cmd} value={size.cmd}>{size.label}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <label className="editor-color-picker" title="글자 색상">
+                      <input
+                        type="color"
+                        onChange={(e) => execEditorCommand('foreColor', e.target.value)}
+                      />
+                      A
+                    </label>
+                    <label className="editor-color-picker" title="배경 색상">
+                      <input
+                        type="color"
+                        onChange={(e) => handleHighlight(e.target.value)}
+                      />
+                      ■
+                    </label>
+                    <div className="editor-divider" />
+                    <button type="button" onClick={() => execEditorCommand('justifyLeft')} title="왼쪽 정렬">
+                      L
+                    </button>
+                    <button type="button" onClick={() => execEditorCommand('justifyCenter')} title="가운데 정렬">
+                      C
+                    </button>
+                    <button type="button" onClick={() => execEditorCommand('justifyRight')} title="오른쪽 정렬">
+                      R
+                    </button>
+                    <div className="editor-divider" />
+                    <button type="button" onClick={() => execEditorCommand('insertUnorderedList')} title="불릿 목록">
+                      ••
+                    </button>
+                    <button type="button" onClick={() => execEditorCommand('insertOrderedList')} title="번호 목록">
+                      1.
+                    </button>
+                    <button type="button" onClick={() => execEditorCommand('outdent')} title="내어쓰기">
+                      ⇤
+                    </button>
+                    <button type="button" onClick={() => execEditorCommand('indent')} title="들여쓰기">
+                      ⇥
+                    </button>
+                    <div className="editor-divider" />
+                    <button type="button" onClick={() => execEditorCommand('formatBlock', '<blockquote>')} title="인용">
+                      ❝
+                    </button>
+                    <button type="button" onClick={() => execEditorCommand('formatBlock', '<h4>')} title="소제목">
+                      H4
+                    </button>
+                    <div className="editor-divider" />
+                    <button type="button" onClick={handleInsertLink} title="링크">
+                      🔗
+                    </button>
+                    <button type="button" onClick={handleInsertImage} title="이미지">
+                      🖼
+                    </button>
+                  </div>
+                  <div
+                    id="description"
+                    ref={editorRef}
+                    className={`form-textarea-inline editor-surface ${isEditorFullscreen ? 'fullscreen' : ''}`}
+                    contentEditable
+                    suppressContentEditableWarning
+                    onInput={handleEditorInput}
+                  />
+                </div>
               </div>
 
               <div className="form-submit-container">

@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
-import { BrowserRouter as Router, Routes, Route, Link, useNavigate } from 'react-router-dom'
+import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom'
 import { db, auth } from './firebase'
-import { collection, addDoc, getDocs, Timestamp, doc, getDoc, onSnapshot, query, orderBy } from 'firebase/firestore'
+import { collection, addDoc, getDocs, Timestamp, doc, getDoc, onSnapshot, query, orderBy, where, updateDoc } from 'firebase/firestore'
 import { onAuthStateChanged, User, signOut } from 'firebase/auth'
 import NewSignupPage from './pages/NewSignupPage'
 import LoginPage from './pages/LoginPage'
@@ -37,6 +37,8 @@ interface Slide {
   linkType: 'book' | 'custom';
   order: number;
   isActive: boolean;
+  postingStart?: Timestamp | null;
+  postingEnd?: Timestamp | null;
   titleColor?: string;
   subtitleColor?: string;
 }
@@ -50,6 +52,11 @@ function App() {
   const slideIntervalRef = useRef<NodeJS.Timeout | null>(null)
   const adSlideIntervalRef = useRef<NodeJS.Timeout | null>(null)
   const slideWidthRef = useRef<number>(0)
+  // 터치 스와이프를 위한 상태
+  const [touchStart, setTouchStart] = useState<number | null>(null)
+  const [touchEnd, setTouchEnd] = useState<number | null>(null)
+  const [isDragging, setIsDragging] = useState(false)
+  const [dragOffset, setDragOffset] = useState(0)
   const [newBook, setNewBook] = useState({
     title: '',
     author: '',
@@ -63,6 +70,23 @@ function App() {
   const [selectedBook, setSelectedBook] = useState<Book | null>(null)
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [isInitialLoad, setIsInitialLoad] = useState(true) // 초기 로딩 상태
+  const [isMobileView, setIsMobileView] = useState(false) // 모바일 뷰 전환 상태
+
+  const timestampToMillis = (value: any): number | null => {
+    if (!value) return null
+    try {
+      if (value.toDate) return value.toDate().getTime()
+      if (value.seconds) return value.seconds * 1000
+      if (value instanceof Date) return value.getTime()
+      if (typeof value === 'string') {
+        const parsed = Date.parse(value)
+        return isNaN(parsed) ? null : parsed
+      }
+    } catch (error) {
+      console.error('슬라이드 기간 변환 오류:', error)
+    }
+    return null
+  }
 
   // Firestore에서 책 목록 실시간으로 가져오기
   useEffect(() => {
@@ -111,6 +135,27 @@ function App() {
             ...doc.data()
           })) as Slide[]
         
+        const nowMs = Date.now()
+        const updatePromises: Promise<void>[] = []
+        slidesData.forEach((slide) => {
+          const endMs = timestampToMillis((slide as any).postingEnd)
+          const shouldBeActive = endMs === null || endMs >= nowMs
+
+          if (typeof slide.isActive === 'boolean' && slide.isActive !== shouldBeActive) {
+            updatePromises.push(
+              updateDoc(doc(db, 'slides', slide.id), {
+                isActive: shouldBeActive,
+                updatedAt: Timestamp.now()
+              }).catch((error) => console.error('슬라이드 상태 자동 업데이트 오류:', error))
+            )
+            slide.isActive = shouldBeActive
+          }
+        })
+
+        if (updatePromises.length > 0) {
+          Promise.all(updatePromises).catch((error) => console.error('슬라이드 상태 비동기 업데이트 오류:', error))
+        }
+
         // 활성화된 메인 슬라이드만 필터링하고 정렬
         const activeMainSlides = slidesData
           .filter(slide => slide.isActive && (slide.slideType === 'main' || !slide.slideType))
@@ -156,12 +201,18 @@ function App() {
           setAdSlides(activeAdSlides.length > 0 ? activeAdSlides : [])
         }
         
-        // 슬라이드 너비 계산 (3.5개가 보이도록)
+        // 슬라이드 너비 계산 (모바일에서는 전체 화면, 데스크톱에서는 3.5개가 보이도록)
         if (typeof window !== 'undefined') {
           const viewportWidth = window.innerWidth
-          const padding = 80 // 좌우 패딩 40px * 2
-          const gaps = 48 // 슬라이드 간 간격 16px * 3
-          slideWidthRef.current = (viewportWidth - padding - gaps) / 3.5
+          if (viewportWidth <= 768) {
+            // 모바일: 전체 화면 너비
+            slideWidthRef.current = viewportWidth
+          } else {
+            // 데스크톱: 3.5개가 보이도록
+            const padding = 80 // 좌우 패딩 40px * 2
+            const gaps = 48 // 슬라이드 간 간격 16px * 3
+            slideWidthRef.current = (viewportWidth - padding - gaps) / 3.5
+          }
         }
       },
       (error: any) => {
@@ -176,6 +227,7 @@ function App() {
   // 자동 슬라이드 전환 (5초 간격) - 한 슬라이드씩 이동하여 빈칸 없이 표시 (메인 슬라이드)
   useEffect(() => {
     if (!slides || slides.length === 0) return
+    if (isMobileView) return // 모바일 뷰에서는 자동 전환 비활성화 (사용자가 직접 조작)
 
     // 기존 인터벌 클리어
     if (slideIntervalRef.current) {
@@ -195,7 +247,7 @@ function App() {
         clearInterval(slideIntervalRef.current)
       }
     }
-  }, [slides])
+  }, [slides, isMobileView])
 
   // 자동 광고 슬라이드 전환 (5초 간격) - 한 슬라이드씩 이동하여 빈칸 없이 표시 (광고 슬라이드)
   useEffect(() => {
@@ -250,6 +302,75 @@ function App() {
       return () => clearTimeout(timer)
     }
   }, [currentAdSlideIndex, adSlides])
+
+  // 터치 시작
+  const handleTouchStart = (e: React.TouchEvent) => {
+    setTouchEnd(null)
+    setTouchStart(e.targetTouches[0].clientX)
+    setIsDragging(true)
+    setDragOffset(0)
+    // 자동 슬라이드 일시 정지
+    if (slideIntervalRef.current) {
+      clearInterval(slideIntervalRef.current)
+    }
+  }
+
+  // 터치 이동
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (!touchStart) return
+    e.preventDefault() // 스크롤 방지
+    const currentTouch = e.targetTouches[0].clientX
+    const diff = touchStart - currentTouch
+    setDragOffset(diff)
+    setTouchEnd(currentTouch)
+  }
+
+  // 터치 종료
+  const handleTouchEnd = () => {
+    if (!touchStart) {
+      setIsDragging(false)
+      setDragOffset(0)
+      return
+    }
+
+    if (touchEnd === null) {
+      setIsDragging(false)
+      setDragOffset(0)
+      setTouchStart(null)
+      // 자동 슬라이드 재시작
+      if (slides && slides.length > 0) {
+        slideIntervalRef.current = setInterval(() => {
+          setCurrentSlideIndex((prevIndex) => (prevIndex + 1) % slides.length)
+        }, 5000)
+      }
+      return
+    }
+
+    const distance = touchStart - touchEnd
+    const isLeftSwipe = distance > 50
+    const isRightSwipe = distance < -50
+
+    if (isLeftSwipe && slides) {
+      setCurrentSlideIndex((prevIndex) => (prevIndex + 1) % slides.length)
+    }
+    if (isRightSwipe && slides) {
+      setCurrentSlideIndex((prevIndex) => 
+        prevIndex === 0 ? slides.length - 1 : prevIndex - 1
+      )
+    }
+
+    setIsDragging(false)
+    setDragOffset(0)
+    setTouchStart(null)
+    setTouchEnd(null)
+
+    // 자동 슬라이드 재시작
+    if (slides && slides.length > 0) {
+      slideIntervalRef.current = setInterval(() => {
+        setCurrentSlideIndex((prevIndex) => (prevIndex + 1) % slides.length)
+      }, 5000)
+    }
+  }
 
   // 슬라이드 클릭 시 링크로 이동
   const handleSlideClick = async (slide: Slide) => {
@@ -317,12 +438,41 @@ function App() {
       setUser(user)
       
       if (user) {
+        setIsAdmin(true)
         try {
           // 사용자의 관리자 권한 확인 (level이 "admin"인 경우)
           const userDoc = await getDoc(doc(db, 'users', user.uid))
-          if (userDoc.exists()) {
-            const userData = userDoc.data()
+          let userData: any | null = null
 
+          if (userDoc.exists()) {
+            userData = userDoc.data()
+          } else {
+            // Fallback: lookup by email if document ID != auth UID
+            try {
+              if (user.email) {
+                const usersRef = collection(db, 'users')
+                const emailQuery = query(usersRef, where('email', '==', user.email))
+                const emailSnapshot = await getDocs(emailQuery)
+                if (!emailSnapshot.empty) {
+                  userData = emailSnapshot.docs[0].data()
+                }
+              }
+
+              // Additional fallback: lookup by custom id field (로그인 ID)
+              if (!userData && user.displayName) {
+                const usersRef = collection(db, 'users')
+                const idQuery = query(usersRef, where('id', '==', user.displayName))
+                const idSnapshot = await getDocs(idQuery)
+                if (!idSnapshot.empty) {
+                  userData = idSnapshot.docs[0].data()
+                }
+              }
+            } catch (lookupError) {
+              console.error('추가 사용자 정보 조회 오류:', lookupError)
+            }
+          }
+
+          if (userData) {
             const normalizeString = (value: unknown) =>
               typeof value === 'string' ? value.trim().toLowerCase() : ''
 
@@ -432,65 +582,128 @@ function App() {
     <Router>
       <Routes>
         <Route path="/" element={
-          <div className="publishing-website">
+          <div className={`publishing-website ${isMobileView ? 'mobile-viewport' : ''}`}>
             {/* 헤더 */}
             <header className="main-header">
               <div className="header-content">
-                <div className="logo-section">
-                  <div className="logo-icon">📚</div>
-                  <div className="logo-text">
-                    <h1 style={{ fontSize: '16px', margin: 0, fontWeight: 700, color: '#1f2937', lineHeight: 1.2 }}>출판도서</h1>
-                    <p style={{ fontSize: '16px', margin: '2px 0 0 0', fontWeight: 600, color: '#374151', lineHeight: 1.2 }}>Publishing House</p>
-                  </div>
-                </div>
-                <div className="header-actions">
-                  {user ? (
-                    <>
-                      <div className="user-menu">
-                        <Link to="/user" className="user-greeting">
-                          안녕하세요, {headerName}님
-                        </Link>
-                        {isAdmin && <Link to="/admin" className="admin-link">관리자</Link>}
-                      </div>
-                      <button
-                        onClick={handleLogout}
-                        className="icon-btn logout-icon-btn"
-                        aria-label="로그아웃"
-                      >
-                        <img src="/logout-icon.svg" alt="로그아웃" />
-                      </button>
-                    </>
-                  ) : (
-                    <Link
-                      to="/login"
-                      className="icon-btn login-icon-btn"
-                      aria-label="로그인"
+                {isMobileView ? (
+                  <>
+                    {/* 모바일 뷰: 출판도서만 표시 */}
+                    <div className="logo-section">
+                      <h1 style={{ fontSize: '18px', margin: 0, fontWeight: 700, color: '#ffffff', lineHeight: 1.2 }}>출판도서</h1>
+                    </div>
+                    {/* 모바일 뷰: Web view 전환 버튼만 */}
+                    <button
+                      onClick={() => setIsMobileView(false)}
+                      className="icon-btn mobile-view-btn"
+                      aria-label="웹 뷰로 전환"
+                      title="웹 뷰로 전환"
                     >
-                      <img src="/login-icon.svg" alt="로그인" />
-                    </Link>
-                  )}
-                </div>
+                      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M4 6H20V4H4C2.9 4 2 4.9 2 6V18C2 19.1 2.9 20 4 20H8V18H4V6ZM20 8H8C6.9 8 6 8.9 6 10V20C6 21.1 6.9 22 8 22H20C21.1 22 22 21.1 22 20V10C22 8.9 21.1 8 20 8ZM20 20H8V10H20V20Z" fill="currentColor"/>
+                      </svg>
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <div className="logo-section">
+                      <div className="logo-icon">📚</div>
+                      <div className="logo-text">
+                        <h1 style={{ fontSize: '16px', margin: 0, fontWeight: 700, color: '#1f2937', lineHeight: 1.2 }}>출판도서</h1>
+                        <p style={{ fontSize: '16px', margin: '2px 0 0 0', fontWeight: 600, color: '#374151', lineHeight: 1.2 }}>Publishing House</p>
+                      </div>
+                    </div>
+                    <div className="header-actions">
+                      {/* 스마트폰 뷰 전환 버튼 */}
+                      <button
+                        onClick={() => setIsMobileView(true)}
+                        className="icon-btn mobile-view-btn"
+                        aria-label="모바일 뷰로 전환"
+                        title="모바일 뷰로 전환"
+                      >
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                          <path d="M17 2H7C5.9 2 5 2.9 5 4V20C5 21.1 5.9 22 7 22H17C18.1 22 19 21.1 19 20V4C19 2.9 18.1 2 17 2ZM17 20H7V4H17V20Z" fill="currentColor"/>
+                          <path d="M12 17.5C12.83 17.5 13.5 16.83 13.5 16C13.5 15.17 12.83 14.5 12 14.5C11.17 14.5 10.5 15.17 10.5 16C10.5 16.83 11.17 17.5 12 17.5Z" fill="currentColor"/>
+                        </svg>
+                      </button>
+                      {user ? (
+                        <>
+                          <div className="user-menu">
+                            <Link to="/user" className="user-greeting">
+                              안녕하세요, {headerName}님
+                            </Link>
+                            {isAdmin && <Link to="/admin" className="admin-link">관리자</Link>}
+                          </div>
+                          <button
+                            onClick={handleLogout}
+                            className="icon-btn logout-icon-btn"
+                            aria-label="로그아웃"
+                          >
+                            <img src="/logout-icon.svg" alt="로그아웃" />
+                          </button>
+                        </>
+                      ) : (
+                        <Link
+                          to="/login"
+                          className="icon-btn login-icon-btn"
+                          aria-label="로그인"
+                        >
+                          <img src="/login-icon.svg" alt="로그인" />
+                        </Link>
+                      )}
+                    </div>
+                  </>
+                )}
               </div>
             </header>
 
             {/* 메인 캐러셀 - 메인슬라이드 관리 데이터 사용 */}
             {slides && slides.length > 0 ? (
-            <section className="hero-carousel">
-              <h2 className="carousel-section-title">메인슬라이드</h2>
+            <section 
+              className="hero-carousel card-slider"
+              onTouchStart={(e) => {
+                if (isMobileView) {
+                  handleTouchStart(e)
+                }
+              }}
+              onTouchMove={(e) => {
+                if (isMobileView) {
+                  handleTouchMove(e)
+                }
+              }}
+              onTouchEnd={() => {
+                if (isMobileView) {
+                  handleTouchEnd()
+                }
+              }}
+            >
               <div 
-                className="carousel-container"
+                className="carousel-container card-slider-container"
                 style={{
-                  transform: currentSlideIndex === 0 
-                    ? `translateX(0)` 
-                    : `translateX(calc(-${currentSlideIndex} * (calc((100vw - 20px) / 4.5) + 16px)))`
+                  transform: isMobileView
+                    ? `translateX(calc(-${currentSlideIndex} * 320px + ${isDragging ? dragOffset : 0}px + 50% - 160px))`
+                    : (typeof window !== 'undefined' && window.innerWidth <= 768)
+                    ? `translateX(calc(-${currentSlideIndex} * 85% + ${isDragging ? dragOffset : 0}px))`
+                    : `translateX(calc(-${currentSlideIndex} * (460px + 16px)))`,
+                  transition: isDragging ? 'none' : 'transform 0.3s ease-out'
                 }}
               >
-                {/* 슬라이드를 두 번 복제하여 빈칸 없이 무한 루프 */}
-                {[...slides, ...slides].map((slide, index) => (
+                {/* 모바일에서는 카드 슬라이드 스타일로 표시 */}
+                {slides.map((slide, index) => {
+                  const isActive = index === currentSlideIndex
+                  const isPrev = index === (currentSlideIndex - 1 + slides.length) % slides.length
+                  const isNext = index === (currentSlideIndex + 1) % slides.length
+                  
+                  return (
                   <div
                     key={`${slide.id}-${index}`}
-                    className="carousel-slide"
-                    onClick={() => handleSlideClick(slide)}
+                    className={`carousel-slide card-slide ${isActive ? 'active' : ''} ${isPrev ? 'prev' : ''} ${isNext ? 'next' : ''}`}
+                    onClick={() => {
+                      // 스와이프 중이 아닐 때만 클릭 처리
+                      if (!isDragging && Math.abs(dragOffset) < 10) {
+                        handleSlideClick(slide)
+                      }
+                    }}
                     style={{ cursor: slide.linkUrl ? 'pointer' : 'default' }}
                   >
                     <div className="slide-content">
@@ -518,7 +731,8 @@ function App() {
                       </div>
                     </div>
                   </div>
-                ))}
+                  )
+                })}
               </div>
               <div className="carousel-controls">
                 <button 
@@ -635,13 +849,12 @@ function App() {
             {/* 광고 슬라이드 섹션 */}
             {adSlides && adSlides.length > 0 ? (
             <section className="hero-carousel">
-              <h2 className="carousel-section-title">홍보합니다.</h2>
               <div 
                 className="carousel-container"
                 style={{
-                  transform: currentAdSlideIndex === 0 
-                    ? `translateX(0)` 
-                    : `translateX(calc(-${currentAdSlideIndex} * (calc((100vw - 40px) / 4.5) + 16px)))`
+                  transform: typeof window !== 'undefined' && window.innerWidth <= 768
+                    ? `translateX(calc(-${currentAdSlideIndex} * 100vw))`
+                    : `translateX(calc(-${currentAdSlideIndex} * (460px + 16px)))`
                 }}
               >
                 {/* 광고 슬라이드를 두 번 복제하여 빈칸 없이 무한 루프 (슬라이드가 1개일 때는 복제하지 않음) */}

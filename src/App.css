@@ -3,12 +3,93 @@
   font-family: 'Suite', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
   line-height: 1.6;
   color: #333;
-  background-color: #fff;
+  background-color: #fff; /* 웹 뷰: 흰색 배경 */
   margin: 0 auto;
   padding: 0;
   min-height: 100vh;
   width: 100%;
   max-width: 1600px;
+  transition: all 0.3s ease;
+}
+
+/* 모바일 뷰포트 모드 */
+.publishing-website.mobile-viewport {
+  max-width: 375px;
+  width: 375px;
+  box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.1), 0 0 40px rgba(0, 0, 0, 0.2);
+  margin: 20px auto;
+  border-radius: 20px;
+  overflow: hidden;
+  position: relative;
+  min-height: calc(100vh - 40px);
+  background-color: #4a4a4a !important; /* 모바일 뷰: 진한 회색 배경 (웹과 다름) */
+}
+
+/* 모바일 뷰포트 내부 모든 요소 배경색 */
+.mobile-viewport * {
+  background-color: transparent;
+}
+
+.mobile-viewport .main-header,
+.mobile-viewport .hero-carousel,
+.mobile-viewport .book-section {
+  background-color: transparent;
+}
+
+.publishing-website.mobile-viewport::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: -1;
+  pointer-events: none;
+}
+
+/* 모바일 뷰포트 헤더 스타일 */
+.mobile-viewport .main-header {
+  background: #4a4a4a;
+  box-shadow: none;
+}
+
+.mobile-viewport .header-content {
+  justify-content: space-between;
+}
+
+.mobile-viewport .mobile-view-btn {
+  background: rgba(255, 255, 255, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  color: #ffffff;
+}
+
+.mobile-viewport .mobile-view-btn:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+/* 모바일 뷰포트 버튼 스타일 */
+.mobile-view-btn {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  padding: 8px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background-color 0.2s ease, box-shadow 0.2s ease;
+  color: #2563eb;
+}
+
+.mobile-view-btn:hover {
+  background-color: #eff6ff;
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.18);
+}
+
+.mobile-view-btn svg {
+  width: 22px;
+  height: 22px;
 }
 
 /* 헤더 */
@@ -175,17 +256,15 @@
 }
 
 .carousel-slide {
-  /* 화면 폭에 맞게 자연스럽게 표시 - 슬라이드가 화면에 맞게 조정 */
-  min-width: calc((100vw - 20px) / 4.5); /* 화면 폭에 맞게 4.5개 정도 보이도록 (좌측 패딩 제거로 20px로 조정) */
-  width: calc((100vw - 20px) / 4.5);
-  aspect-ratio: 16 / 9 !important; /* 16:9 비율 고정 */
-  flex-shrink: 0;
+  width: 460px;
+  min-width: 460px;
+  height: 260px;
+  flex: 0 0 460px;
   position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
   margin-right: 16px; /* 슬라이드 간 간격 */
-  height: auto !important; /* 높이는 aspect-ratio로 자동 계산 */
 }
 
 .slide-content {
@@ -361,7 +440,7 @@
 /* 도서 섹션 */
 .book-section {
   max-width: 1600px;
-  margin: 0 auto 20px; /* 상단 마진 0 (위 섹션의 하단 마진으로 처리), 하단 마진 20px */
+  margin: 0 auto 10px; /* 섹션 간 간격 축소 */
   padding: 0 20px;
 }
 
@@ -369,7 +448,7 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin: 0 0 15px 0; /* 상단 마진 0, 하단 마진 15px (제목과 도서 카드 사이 - 같은 주제 내) */
+  margin: 0; /* 제목과 카드 사이 여백 제거 */
 }
 
 .section-header h2 {
@@ -411,7 +490,8 @@
 }
 
 .book-card {
-  min-width: 270px; /* 1.5배 증가: 180px → 270px */
+  width: 270px;
+  min-width: 270px;
   background: white;
   border-radius: 12px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
@@ -586,8 +666,256 @@
   line-height: 1.5;
 }
 
-/* 반응형 디자인 */
+/* 카드 슬라이드 스타일 (모바일 전용) */
 @media (max-width: 768px) {
+  .card-slider {
+    margin: 0;
+    padding: 20px 0;
+    overflow: visible;
+    position: relative;
+  }
+
+  .card-slider-container {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    padding: 0;
+    margin: 0;
+    gap: 0;
+  }
+
+  .card-slide {
+    width: 85% !important;
+    min-width: 85% !important;
+    max-width: 85% !important;
+    height: 200px;
+    flex: 0 0 85% !important;
+    margin: 0 !important;
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+    transition: transform 0.3s ease-out, opacity 0.3s ease-out, scale 0.3s ease-out;
+    position: relative;
+    z-index: 1;
+  }
+
+  .card-slide.active {
+    transform: scale(1);
+    opacity: 1;
+    z-index: 3;
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.4);
+  }
+
+  .card-slide.prev {
+    transform: translateX(-30%) scale(0.85);
+    opacity: 0.6;
+    z-index: 2;
+  }
+
+  .card-slide.next {
+    transform: translateX(30%) scale(0.85);
+    opacity: 0.6;
+    z-index: 2;
+  }
+
+  /* 이전/다음이 아닌 슬라이드는 숨김 */
+  .card-slide:not(.active):not(.prev):not(.next) {
+    opacity: 0;
+    pointer-events: none;
+  }
+}
+
+/* 모바일 뷰포트에서도 모바일 스타일 적용 */
+.mobile-viewport .card-slider {
+  margin: 20px 0;
+  padding: 0;
+  overflow: visible;
+  position: relative;
+  width: 100%;
+  height: 240px;
+  touch-action: pan-x;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.mobile-viewport .card-slider-container {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  position: relative;
+  gap: 0;
+  padding: 0;
+}
+
+/* 메인 슬라이드 (중앙, 모바일 사이즈보다 조금 작게) */
+.mobile-viewport .card-slide {
+  width: 320px !important;
+  min-width: 320px !important;
+  max-width: 320px !important;
+  height: 220px !important;
+  flex: 0 0 320px !important;
+  margin: 0 !important;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+  transition: transform 0.3s ease-out, opacity 0.3s ease-out;
+  position: relative;
+  z-index: 1;
+  pointer-events: auto;
+  opacity: 1 !important;
+  display: flex !important;
+}
+
+.mobile-viewport .card-slide.active {
+  transform: scale(1) !important;
+  opacity: 1 !important;
+  z-index: 3;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.6);
+}
+
+/* 좌우에 배치되는 이전/다음 슬라이드 */
+.mobile-viewport .card-slide.prev {
+  width: 100px !important;
+  min-width: 100px !important;
+  max-width: 100px !important;
+  height: 180px !important;
+  opacity: 0.6 !important;
+  z-index: 2;
+  border-radius: 12px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.4);
+  transform: scale(0.85) !important;
+  pointer-events: auto;
+  display: flex !important;
+  position: absolute;
+  left: 20px;
+}
+
+.mobile-viewport .card-slide.next {
+  width: 100px !important;
+  min-width: 100px !important;
+  max-width: 100px !important;
+  height: 180px !important;
+  opacity: 0.6 !important;
+  z-index: 2;
+  border-radius: 12px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.4);
+  transform: scale(0.85) !important;
+  pointer-events: auto;
+  display: flex !important;
+  position: absolute;
+  right: 20px;
+}
+
+
+.mobile-viewport .card-slide:not(.active):not(.prev):not(.next) {
+  opacity: 0;
+  pointer-events: none;
+  display: none;
+}
+
+/* 모바일 뷰포트에서 다른 섹션 숨김 */
+.mobile-viewport .book-section,
+.mobile-viewport .main-footer {
+  display: none;
+}
+
+/* 모바일 뷰포트에서 슬라이드 컨트롤 숨김 */
+.mobile-viewport .carousel-controls,
+.mobile-viewport .carousel-dots {
+  display: none;
+}
+
+/* 모바일 뷰포트에서 모바일 스타일 적용 */
+.mobile-viewport {
+  max-width: 100% !important;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: none;
+}
+
+.mobile-viewport .header-content {
+  padding: 0 16px;
+  height: 60px;
+}
+
+.mobile-viewport .hero-carousel:not(.card-slider) {
+  margin: 16px 0;
+}
+
+.mobile-viewport .hero-carousel:not(.card-slider) .carousel-slide {
+  width: 100%;
+  min-width: 100%;
+  aspect-ratio: 16 / 9;
+  margin-right: 0;
+}
+
+.mobile-viewport .hero-carousel:not(.card-slider) .carousel-container {
+  padding-left: 0;
+  padding-right: 0;
+}
+
+.mobile-viewport .slide-text h2 {
+  font-size: 24px;
+  padding: 20px 16px 16px 16px;
+}
+
+.mobile-viewport .slide-text p {
+  font-size: 14px;
+  padding: 0 16px 16px 16px;
+}
+
+.mobile-viewport .section-header {
+  padding: 0 16px;
+}
+
+.mobile-viewport .section-header h2 {
+  font-size: 22px;
+}
+
+.mobile-viewport .book-section {
+  padding: 0 16px;
+}
+
+.mobile-viewport .books-container {
+  gap: 12px;
+  padding: 5px 0;
+}
+
+.mobile-viewport .book-card {
+  min-width: 160px;
+  border-radius: 8px;
+}
+
+.mobile-viewport .book-cover {
+  height: 220px;
+}
+
+.mobile-viewport .book-info {
+  padding: 16px 12px 12px 12px;
+}
+
+.mobile-viewport .book-info h3 {
+  font-size: 16px;
+}
+
+.mobile-viewport .book-info .author {
+  font-size: 13px;
+}
+
+/* 모바일 전용 스타일 - 앱처럼 보이도록 */
+@media (max-width: 768px) {
+  /* 전체 레이아웃을 모바일 앱처럼 */
+  .publishing-website {
+    max-width: 100%;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: none;
+  }
+
+  /* 헤더를 모바일 앱처럼 */
   .header-content {
     padding: 0 16px;
     height: 60px;
@@ -602,88 +930,265 @@
     color: #374151 !important; /* 더 진한 색상 */
     font-weight: 600 !important; /* 더 굵게 */
   }
-  
-  .hero-carousel {
-    /* height 제거 - aspect-ratio로 자동 조정 */
+
+  /* 모바일에서 터치 친화적으로 */
+  .icon-btn {
+    min-width: 44px;
+    min-height: 44px;
+  }
+
+  .user-greeting {
+    font-size: 14px;
   }
   
-  .carousel-slide {
-    aspect-ratio: 16 / 9; /* 모바일에서도 16:9 비율 유지 */
+  .hero-carousel:not(.card-slider) {
+    margin: 16px 0;
+  }
+  
+  .hero-carousel:not(.card-slider) .carousel-slide {
+    width: 100vw;
+    min-width: 100vw;
+    aspect-ratio: 16 / 9;
+    margin-right: 0;
+  }
+
+  .hero-carousel:not(.card-slider) .carousel-container {
+    padding-left: 0;
+    padding-right: 0;
   }
   
   .slide-text h2 {
-    font-size: 32px;
+    font-size: 24px;
+    padding: 20px 16px 16px 16px;
   }
   
   .slide-text p {
-    font-size: 16px;
+    font-size: 14px;
+    padding: 0 16px 16px 16px;
   }
   
+  .section-header {
+    padding: 0 16px;
+  }
+
   .section-header h2 {
-    font-size: 24px;
+    font-size: 22px;
+  }
+
+  .more-link {
+    font-size: 14px;
+  }
+  
+  .book-section {
+    padding: 0 16px;
+  }
+
+  .books-container {
+    gap: 12px;
+    padding: 5px 0;
   }
   
   .book-card {
-    min-width: 150px;
+    min-width: 160px;
+    border-radius: 8px;
+  }
+  
+  .book-cover {
+    height: 220px;
+  }
+
+  .book-info {
+    padding: 16px 12px 12px 12px;
+  }
+
+  .book-info h3 {
+    font-size: 16px;
+  }
+
+  .book-info .author {
+    font-size: 13px;
+  }
+  
+  .carousel-arrows {
+    display: none;
+  }
+
+  .carousel-prev,
+  .carousel-next {
+    min-width: 44px;
+    min-height: 44px;
+    font-size: 36px;
+  }
+  
+  .footer-content {
+    grid-template-columns: 1fr;
+    gap: 24px;
+    padding: 0 16px;
+  }
+
+  .main-footer {
+    padding: 40px 0 30px 0;
+    margin-top: 40px;
+  }
+
+  .footer-section h3 {
+    font-size: 16px;
+  }
+
+  .footer-section p {
+    font-size: 13px;
+  }
+}
+
+/* 작은 스마트폰 전용 스타일 */
+@media (max-width: 480px) {
+  .header-content {
+    height: 56px;
+    padding: 0 12px;
+  }
+
+  .logo-icon {
+    font-size: 28px;
+  }
+
+  .logo-text h1 {
+    font-size: 14px !important;
+  }
+
+  .logo-text p {
+    font-size: 14px !important;
+  }
+  
+  .header-actions {
+    gap: 8px;
+  }
+  
+  .user-menu {
+    gap: 6px;
+  }
+
+  .user-greeting {
+    font-size: 12px;
+    display: none; /* 작은 화면에서는 숨김 */
+  }
+
+  .admin-link {
+    font-size: 12px;
+  }
+
+  .icon-btn {
+    min-width: 40px;
+    min-height: 40px;
+    padding: 6px;
+  }
+
+  .icon-btn img {
+    width: 18px;
+    height: 18px;
+  }
+  
+  .hero-carousel {
+    margin: 12px 0;
+  }
+  
+  .carousel-slide {
+    aspect-ratio: 16 / 9;
+  }
+  
+  .slide-text {
+    padding: 16px 12px 12px 12px;
+  }
+
+  .slide-text h2 {
+    font-size: 20px;
+  }
+  
+  .slide-text p {
+    font-size: 13px;
+  }
+
+  .section-header {
+    padding: 0 12px;
+  }
+
+  .section-header h2 {
+    font-size: 20px;
+  }
+
+  .more-link {
+    font-size: 13px;
+  }
+
+  .book-section {
+    padding: 0 12px;
+  }
+
+  .books-container {
+    gap: 10px;
+  }
+  
+  .book-card {
+    min-width: 140px;
   }
   
   .book-cover {
     height: 200px;
   }
   
-  .carousel-arrows {
-    display: none;
-  }
-  
-  .footer-content {
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 30px;
-  }
-}
-
-@media (max-width: 480px) {
-  .header-actions {
-    gap: 8px;
-  }
-  
-  .user-menu {
-    flex-direction: column;
-    gap: 8px;
-  }
-  
-  .hero-carousel {
-    /* height 제거 - aspect-ratio로 자동 조정 */
-  }
-  
-  .carousel-slide {
-    aspect-ratio: 16 / 9; /* 작은 화면에서도 16:9 비율 유지 */
-  }
-  
-  .slide-text h2 {
-    font-size: 24px;
-  }
-  
-  .slide-text p {
-    font-size: 14px;
-  }
-  
-  .book-card {
-    min-width: 120px;
-  }
-  
-  .book-cover {
-    height: 160px;
-  }
-  
   .book-info {
-    padding: 12px;
+    padding: 14px 10px 10px 10px;
   }
   
   .book-info h3 {
-    font-size: 14px;
+    font-size: 15px;
   }
   
   .book-info .author {
     font-size: 12px;
+  }
+
+  .carousel-prev,
+  .carousel-next {
+    font-size: 32px;
+    padding: 16px;
+  }
+
+  .main-footer {
+    padding: 32px 0 24px 0;
+    margin-top: 32px;
+  }
+
+  .footer-content {
+    padding: 0 12px;
+    gap: 20px;
+  }
+
+  .footer-section h3 {
+    font-size: 15px;
+  }
+
+  .footer-section p {
+    font-size: 12px;
+  }
+}
+
+/* PWA 설치 프롬프트를 위한 스타일 */
+@media (display-mode: standalone) {
+  .main-header {
+    /* PWA 모드에서 상단 여백 조정 */
+    padding-top: env(safe-area-inset-top);
+  }
+}
+
+/* iOS Safari 전용 스타일 */
+@supports (-webkit-touch-callout: none) {
+  .publishing-website {
+    /* iOS Safari 최적화 */
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .main-header {
+    position: -webkit-sticky;
+    position: sticky;
   }
 }

@@ -12,6 +12,8 @@ dist
 dist-ssr
 *.local
 .env
+.env.local
+.env.*.local
 
 # Editor directories and files
 .vscode/*
@@ -19,7 +21,7 @@ dist-ssr
 .idea
 .DS_Store
 *.suo
-*.ntvs*
+*.ntvs* 
 *.njsproj
 *.sln
 *.sw?

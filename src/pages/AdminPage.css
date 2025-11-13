@@ -581,6 +581,10 @@ tbody tr:hover {
   color: #333;
 }
 
+.on-air-section .slide-section-header h3 {
+  font-size: 15px;
+}
+
 .slide-count {
   font-size: 0.9rem;
   color: #666;
@@ -589,7 +593,7 @@ tbody tr:hover {
 
 .slides-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(450px, 1fr)); /* 1.5배 확대: 300px * 1.5 = 450px */
+  grid-template-columns: repeat(auto-fill, minmax(460px, 1fr));
   gap: 20px;
   margin-bottom: 20px;
 }
@@ -601,6 +605,9 @@ tbody tr:hover {
   overflow: hidden;
   transition: transform 0.2s ease, box-shadow 0.2s ease;
   position: relative;
+  width: 100%;
+  min-width: 460px;
+  max-width: 460px;
 }
 
 .slide-card:hover {
@@ -611,13 +618,14 @@ tbody tr:hover {
 .slide-image-container {
   position: relative;
   width: 100%;
-  aspect-ratio: 16 / 9; /* 16:9 비율 고정 */
+  height: 260px;
   background: #f8f9fa;
   overflow: hidden;
 }
 
 .add-slide-card .add-slide-area {
-  aspect-ratio: 4 / 3; /* 새 슬라이드 추가 카드도 4:3 비율 */
+  width: 100%;
+  min-height: 260px;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -774,10 +782,52 @@ tbody tr:hover {
 .slide-controls {
   display: flex;
   align-items: center;
-  justify-content: center; /* 가운데 정렬 */
-  gap: 12px; /* 간격 증가: 6px → 12px */
-  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: nowrap;
   width: 100%;
+}
+
+.slide-action-buttons {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.slide-action-buttons .slide-move-btn,
+.slide-action-buttons .slide-edit-icon-bottom,
+.slide-action-buttons .slide-delete-btn {
+  min-width: 32px;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  padding: 0;
+}
+
+.slide-posting-period {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-width: 78px;
+  font-size: 14px;
+  color: #4b5563;
+  line-height: 1.1;
+  padding: 0;
+  border-radius: 0;
+  background: transparent;
+}
+
+.slide-posting-period span:first-child {
+  font-weight: 600;
+}
+
+.slide-controls .toggle-switch.inactive ~ .slide-posting-period {
+  background: rgba(148, 163, 184, 0.15);
+  color: #6b7280;
 }
 
 .toggle-switch {
@@ -794,14 +844,14 @@ tbody tr:hover {
 
 .toggle-slider {
   display: inline-block;
-  padding: 6px 18px; /* 1.5배 확대: 4px 12px → 6px 18px */
+  padding: 6px 14px;
   background: var(--pastel-primary, #acc4ff);
   color: #333;
   border-radius: 20px;
-  font-size: 0.9rem; /* 1.5배 확대: 0.75rem → 0.9rem (0.75 * 1.5 ≈ 1.125, 근사값 0.9) */
+  font-size: 0.9rem;
   font-weight: 500;
   transition: all 0.3s ease;
-  min-width: 75px; /* 1.5배 확대: 50px → 75px */
+  min-width: 70px;
   text-align: center;
 }
 
@@ -866,7 +916,7 @@ tbody tr:hover {
   display: flex;
   align-items: center;
   justify-content: center;
-  min-height: 300px;
+  min-height: 260px;
 }
 
 .add-slide-card:hover {
