@@ -73,18 +73,21 @@ function App() {
   const [selectedBook, setSelectedBook] = useState<Book | null>(null)
   const [isModalOpen, setIsModalOpen] = useState(false)
 
-  // 모바일 뷰 전환 시 body에 클래스 추가/제거 및 localStorage에 저장
+  // 모바일 뷰 전환 시 body와 html에 클래스 추가/제거 및 localStorage에 저장
   useEffect(() => {
     if (isMobileView) {
       document.body.classList.add('mobile-view-active')
+      document.documentElement.classList.add('mobile-view-active')
       localStorage.setItem('isMobileView', 'true')
     } else {
       document.body.classList.remove('mobile-view-active')
+      document.documentElement.classList.remove('mobile-view-active')
       localStorage.setItem('isMobileView', 'false')
     }
     
     return () => {
       document.body.classList.remove('mobile-view-active')
+      document.documentElement.classList.remove('mobile-view-active')
     }
   }, [isMobileView])
 
@@ -94,6 +97,7 @@ function App() {
     if (savedMobileView === 'true') {
       setIsMobileView(true)
       document.body.classList.add('mobile-view-active')
+      document.documentElement.classList.add('mobile-view-active')
     }
   }, [])
 
@@ -389,12 +393,7 @@ function App() {
       setIsDragging(false)
       setDragOffset(0)
       setTouchStart(null)
-      // 자동 슬라이드 재시작
-      if (slides && slides.length > 0) {
-        slideIntervalRef.current = setInterval(() => {
-          setCurrentSlideIndex((prevIndex) => (prevIndex + 1) % slides.length)
-        }, 5000)
-      }
+      // 모바일에서는 자동 슬라이드 재시작하지 않음
       return
     }
 
@@ -658,6 +657,7 @@ function App() {
           if (savedMobileView === 'true') {
             setIsMobileView(true)
             document.body.classList.add('mobile-view-active')
+            document.documentElement.classList.add('mobile-view-active')
           }
         }
       }, 100)
@@ -669,6 +669,7 @@ function App() {
       if (savedMobileView === 'true') {
         setIsMobileView(true)
         document.body.classList.add('mobile-view-active')
+        document.documentElement.classList.add('mobile-view-active')
       }
     }
     
