@@ -267,7 +267,14 @@ function App() {
   // 자동 슬라이드 전환 (5초 간격) - 한 슬라이드씩 이동하여 빈칸 없이 표시 (메인 슬라이드)
   useEffect(() => {
     if (!slides || slides.length === 0) return
-    if (isMobileView) return // 모바일 뷰에서는 자동 전환 비활성화 (사용자가 직접 조작)
+    if (isMobileView) {
+      // 모바일 뷰에서는 자동 전환 완전히 비활성화
+      if (slideIntervalRef.current) {
+        clearInterval(slideIntervalRef.current)
+        slideIntervalRef.current = null
+      }
+      return
+    }
 
     // 기존 인터벌 클리어
     if (slideIntervalRef.current) {
@@ -287,6 +294,7 @@ function App() {
     return () => {
       if (slideIntervalRef.current) {
         clearInterval(slideIntervalRef.current)
+        slideIntervalRef.current = null
       }
     }
   }, [slides, isMobileView])
@@ -408,12 +416,12 @@ function App() {
     setTouchStart(null)
     setTouchEnd(null)
 
-    // 자동 슬라이드 재시작
-    if (slides && slides.length > 0) {
-      slideIntervalRef.current = setInterval(() => {
-        setCurrentSlideIndex((prevIndex) => (prevIndex + 1) % slides.length)
-      }, 5000)
-    }
+    // 모바일에서는 자동 슬라이드 재시작하지 않음
+    // if (slides && slides.length > 0 && !isMobileView) {
+    //   slideIntervalRef.current = setInterval(() => {
+    //     setCurrentSlideIndex((prevIndex) => (prevIndex + 1) % slides.length)
+    //   }, 5000)
+    // }
   }
 
   // 슬라이드 클릭 시 링크로 이동
@@ -868,16 +876,19 @@ function App() {
               className="hero-carousel card-slider"
               onTouchStart={(e) => {
                 if (isMobileView) {
+                  e.preventDefault()
                   handleTouchStart(e)
                 }
               }}
               onTouchMove={(e) => {
                 if (isMobileView) {
+                  e.preventDefault()
                   handleTouchMove(e)
                 }
               }}
               onTouchEnd={(e) => {
                 if (isMobileView) {
+                  e.preventDefault()
                   e.stopPropagation()
                   handleTouchEnd()
                 }
@@ -934,8 +945,10 @@ function App() {
               </div>
               <div className="carousel-controls">
                 <button 
+                  type="button"
                   className="carousel-prev"
                   onClick={(e) => {
+                    e.preventDefault()
                     e.stopPropagation()
                     setCurrentSlideIndex((prevIndex) => 
                       prevIndex === 0 ? (slides?.length || 1) - 1 : prevIndex - 1
@@ -945,8 +958,10 @@ function App() {
                   ‹
                 </button>
                 <button 
+                  type="button"
                   className="carousel-next"
                   onClick={(e) => {
+                    e.preventDefault()
                     e.stopPropagation()
                     setCurrentSlideIndex((prevIndex) => 
                       (prevIndex + 1) % (slides?.length || 1)
@@ -964,6 +979,7 @@ function App() {
                       key={`dot-${index}`}
                       className={`dot ${index === displayIndex ? 'active' : ''}`}
                       onClick={(e) => {
+                        e.preventDefault()
                         e.stopPropagation()
                         setCurrentSlideIndex(index)
                       }}
