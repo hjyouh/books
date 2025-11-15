@@ -12,17 +12,110 @@
   transition: all 0.3s ease;
 }
 
-/* 모바일 뷰포트 모드 */
-.publishing-website.mobile-viewport {
-  max-width: 100%;
-  width: 100%;
-  box-shadow: none;
-  margin: 0;
+/* 모바일 뷰포트 모드 - body에 클래스가 있을 때만 적용 */
+body.mobile-view-active {
+  overflow-x: hidden;
+}
+
+/* 페이지 슬라이드 애니메이션 */
+body.page-sliding-left {
+  overflow-x: hidden;
+  position: relative;
+}
+
+body.page-sliding-left .publishing-website {
+  animation: slideOutLeft 0.3s ease-in-out forwards;
+}
+
+body.page-sliding-right {
+  overflow-x: hidden;
+  position: relative;
+}
+
+body.page-sliding-right .book-detail-page {
+  animation: slideOutRight 0.3s ease-in-out forwards;
+}
+
+@keyframes slideOutLeft {
+  from {
+    transform: translateX(0);
+    opacity: 1;
+  }
+  to {
+    transform: translateX(-100%);
+    opacity: 0.8;
+  }
+}
+
+@keyframes slideOutRight {
+  from {
+    transform: translateX(0);
+    opacity: 1;
+  }
+  to {
+    transform: translateX(100%);
+    opacity: 0.8;
+  }
+}
+
+@keyframes slideInLeft {
+  from {
+    transform: translateX(100%);
+    opacity: 0.8;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes slideInRight {
+  from {
+    transform: translateX(-100%);
+    opacity: 0.8;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+/* 도서 상세 페이지 진입 애니메이션 */
+.book-detail-page {
+  animation: slideInLeft 0.3s ease-in-out;
+}
+
+/* 홈페이지로 돌아올 때 애니메이션 */
+body.page-sliding-right ~ * .publishing-website,
+body:not(.page-sliding-left):not(.page-sliding-right) .publishing-website {
+  animation: slideInRight 0.3s ease-in-out;
+}
+
+body.mobile-view-active .publishing-website.mobile-viewport {
+  max-width: 375px; /* 모바일 사이즈로 고정 */
+  width: 375px;
+  margin: 0 auto;
+  box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
   border-radius: 0;
-  overflow: hidden;
+  overflow-x: hidden;
   position: relative;
   min-height: 100vh;
-  background-color: #4a4a4a !important; /* 모바일 뷰: 진한 회색 배경 (웹과 다름) */
+  background-color: #2a2a2a !important; /* 모바일 뷰: 더 진한 회색 배경 */
+  transition: max-width 0.3s ease, width 0.3s ease;
+}
+
+/* 모바일 뷰포트 모드 (기존 호환성 유지) */
+.publishing-website.mobile-viewport {
+  max-width: 375px; /* 모바일 사이즈로 고정 */
+  width: 375px;
+  margin: 0 auto;
+  box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+  border-radius: 0;
+  overflow-x: hidden;
+  position: relative;
+  min-height: 100vh;
+  background-color: #2a2a2a !important; /* 모바일 뷰: 더 진한 회색 배경 */
+  transition: max-width 0.3s ease, width 0.3s ease;
 }
 
 /* 모바일 뷰포트 내부 모든 요소 배경색 */
@@ -42,7 +135,7 @@
 
 /* 모바일 뷰포트 헤더 스타일 */
 .mobile-viewport .main-header {
-  background: #4a4a4a;
+  background: #2a2a2a;
   box-shadow: none;
 }
 
@@ -239,24 +332,56 @@
 
 .carousel-container {
   display: flex;
-  align-items: flex-start; /* 상단 정렬 */
-  transition: transform 0.5s ease;
-  width: max-content; /* 슬라이드 내용에 맞게 확장 */
-  padding-left: 0; /* 첫 슬라이드가 좌측 끝에 오도록 패딩 제거 */
-  padding-right: 20px; /* 우측 패딩만 추가 */
-  margin-left: 0; /* 좌측 마진 제거 */
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  width: 100%;
+  height: 260px;
+  perspective: 1000px;
 }
 
 .carousel-slide {
   width: 460px;
   min-width: 460px;
   height: 260px;
-  flex: 0 0 460px;
-  position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin-right: 16px; /* 슬라이드 간 간격 */
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform-origin: center center;
+  transition: transform 0.6s ease, opacity 0.6s ease, z-index 0s;
+  cursor: pointer;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+}
+
+/* Stacked Card 효과 - 활성 카드 */
+.carousel-slide.active {
+  transform: translate(-50%, -50%) scale(1) translateX(0);
+  z-index: 3;
+  opacity: 1;
+}
+
+/* Stacked Card 효과 - 이전 카드 (왼쪽 뒤) */
+.carousel-slide.prev {
+  transform: translate(-50%, -50%) scale(0.85) translateX(-120px) rotateY(15deg);
+  z-index: 1;
+  opacity: 0.7;
+}
+
+/* Stacked Card 효과 - 다음 카드 (오른쪽 뒤) */
+.carousel-slide.next {
+  transform: translate(-50%, -50%) scale(0.85) translateX(120px) rotateY(-15deg);
+  z-index: 1;
+  opacity: 0.7;
+}
+
+/* 숨겨진 카드 */
+.carousel-slide:not(.active):not(.prev):not(.next) {
+  opacity: 0;
+  pointer-events: none;
+  z-index: 0;
+  transform: translate(-50%, -50%) scale(0.75) translateX(0);
 }
 
 .slide-content {
@@ -467,6 +592,20 @@
   position: relative;
 }
 
+.mobile-viewport .books-carousel {
+  display: flex !important;
+  flex-direction: column !important;
+  justify-content: flex-start !important;
+  align-items: flex-start !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  position: relative;
+}
+
+.mobile-viewport .books-carousel > * {
+  align-self: flex-start !important;
+}
+
 .books-container {
   display: flex;
   gap: 20px;
@@ -576,6 +715,7 @@
   line-height: 1.4;
   display: -webkit-box;
   -webkit-line-clamp: 2;
+  line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
   text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.5); /* 텍스트 가독성을 위한 그림자 */
@@ -736,48 +876,59 @@
 .mobile-viewport .card-slider-container,
 .mobile-viewport .carousel-container.card-slider-container {
   display: flex !important;
-  flex-direction: row !important;
   align-items: center !important;
-  justify-content: flex-start !important;
-  width: max-content !important;
+  justify-content: center !important;
+  width: 100% !important;
   height: 100% !important;
   position: relative !important;
+  perspective: 1000px !important;
   gap: 0 !important;
   padding: 0 !important;
   margin: 0 !important;
-  will-change: transform !important;
   overflow: visible !important;
 }
 
-/* 메인 슬라이드 (중앙, 모바일 사이즈보다 조금 작게) */
+/* 메인 슬라이드 (중앙, 모바일 사이즈보다 조금 작게) - Stacked Card */
 .mobile-viewport .card-slide,
-.mobile-viewport .carousel-slide.card-slide {
+.mobile-viewport .carousel-slide {
   width: 260px !important;
   min-width: 260px !important;
-  max-width: 260px !important;
   height: 220px !important;
-  flex: 0 0 260px !important;
+  position: absolute !important;
+  left: 50% !important;
+  top: 50% !important;
+  transform-origin: center center !important;
+  transition: transform 0.6s ease, opacity 0.6s ease, z-index 0s !important;
   margin: 0 !important;
   border-radius: 16px !important;
   overflow: hidden !important;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5) !important;
-  transition: transform 0.3s ease-out, opacity 0.3s ease-out !important;
-  position: relative !important;
-  z-index: 1 !important;
-  pointer-events: auto !important;
-  opacity: 1 !important;
-  display: flex !important;
-  visibility: visible !important;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3) !important;
+  cursor: pointer !important;
 }
 
-.mobile-viewport .card-slide.active,
-.mobile-viewport .carousel-slide.card-slide.active {
-  transform: scale(1) !important;
-  opacity: 1 !important;
+.mobile-viewport .carousel-slide.active {
+  transform: translate(-50%, -50%) scale(1) translateX(0) !important;
   z-index: 3 !important;
-  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.6) !important;
-  visibility: visible !important;
-  display: flex !important;
+  opacity: 1 !important;
+}
+
+.mobile-viewport .carousel-slide.prev {
+  transform: translate(-50%, -50%) scale(0.85) translateX(-80px) rotateY(15deg) !important;
+  z-index: 1 !important;
+  opacity: 0.7 !important;
+}
+
+.mobile-viewport .carousel-slide.next {
+  transform: translate(-50%, -50%) scale(0.85) translateX(80px) rotateY(-15deg) !important;
+  z-index: 1 !important;
+  opacity: 0.7 !important;
+}
+
+.mobile-viewport .carousel-slide:not(.active):not(.prev):not(.next) {
+  opacity: 0 !important;
+  pointer-events: none !important;
+  z-index: 0 !important;
+  transform: translate(-50%, -50%) scale(0.75) translateX(0) !important;
 }
 
 .mobile-viewport .card-slide .slide-content {
@@ -898,10 +1049,244 @@
   visibility: hidden !important;
 }
 
-/* 모바일 뷰포트에서 다른 섹션 숨김 */
-.mobile-viewport .book-section,
+/* 모바일 뷰포트에서 푸터만 숨김 */
 .mobile-viewport .main-footer {
   display: none;
+}
+
+/* 모바일 헤더 스타일 */
+.mobile-viewport .header-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 16px;
+  height: 60px;
+}
+
+.mobile-header-title {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.mobile-hamburger-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* 모바일 책 섹션 표시 */
+.mobile-viewport .mobile-book-section {
+  display: flex !important;
+  flex-direction: column;
+  align-items: flex-start !important;
+  padding: 16px 0 16px 20px !important;
+  background-color: transparent;
+  margin-bottom: 0;
+  margin-left: 15px;
+}
+
+.mobile-viewport .section-header {
+  margin-bottom: 4px !important;
+  padding: 0 0 0 0 !important;
+  margin-left: 0 !important;
+  margin-right: 0 !important;
+  align-self: flex-start !important;
+  padding-left: 0 !important;
+}
+
+.mobile-viewport .section-header h2 {
+  color: #ffffff !important;
+  font-size: 18px !important;
+  font-weight: 700 !important;
+}
+
+.mobile-viewport .book-section {
+  margin-bottom: 0;
+  margin-left: 15px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start !important;
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+}
+
+/* 모바일 책 카드 컨테이너 */
+.mobile-books-container {
+  display: flex !important;
+  overflow-x: auto;
+  overflow-y: hidden;
+  gap: 0;
+  padding: 0 20px 0 0 !important;
+  scroll-snap-type: x mandatory;
+  scroll-snap-align: start;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  justify-content: flex-start !important;
+  align-items: flex-start !important;
+  align-self: flex-start !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  margin-left: 0 !important;
+  /* 카드 2개 (140px * 2 = 280px) + 우측 패딩 20px = 300px */
+  /* 화면 가로 375px이므로 세 번째 카드가 75px 정도 보임 */
+}
+
+.mobile-books-container::-webkit-scrollbar {
+  display: none;
+}
+
+/* 출간도서가 1개일 때 스크롤 비활성화 및 너비 제한 */
+.mobile-books-container.single-card-container {
+  overflow-x: hidden !important;
+  overflow: hidden !important;
+  justify-content: flex-start !important;
+  width: 140px !important; /* 카드 너비만 */
+  max-width: 140px !important;
+  min-width: 140px !important;
+  padding-left: 0 !important;
+  padding-right: 20px !important;
+  margin-left: 0 !important;
+}
+
+.mobile-books-container.single-card-container .mobile-book-card {
+  flex-shrink: 0 !important;
+  flex-grow: 0 !important;
+}
+
+/* 출간도서 섹션이 1개일 때 전체 섹션 너비 제한 */
+.mobile-book-section.single-book-section {
+  overflow: hidden !important;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start !important;
+}
+
+.mobile-book-section.single-book-section .books-carousel,
+.mobile-book-section.single-book-section .single-carousel {
+  overflow: hidden !important;
+  width: fit-content !important;
+  max-width: 180px !important;
+  display: flex !important;
+  flex-direction: column !important;
+  justify-content: flex-start !important;
+  align-items: flex-start !important;
+  align-self: flex-start !important;
+}
+
+.mobile-book-section.single-book-section .books-carousel > *,
+.mobile-book-section.single-book-section .single-carousel > * {
+  align-self: flex-start !important;
+}
+
+.mobile-book-section.single-book-section .single-card-container {
+  overflow: hidden !important;
+  justify-content: flex-start !important;
+}
+
+/* 모바일 책 카드 */
+.mobile-book-card {
+  min-width: 140px;
+  max-width: 140px;
+  width: 140px;
+  height: 180px;
+  display: flex;
+  flex-direction: column;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  overflow: hidden;
+  cursor: pointer;
+  scroll-snap-align: start;
+  flex-shrink: 0;
+  position: relative;
+}
+
+.mobile-book-card-content {
+  width: 100%;
+  height: 100%;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+}
+
+.mobile-book-cover-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  position: absolute;
+  top: 0;
+  left: 0;
+}
+
+.mobile-placeholder-cover {
+  width: 100%;
+  height: 100%;
+  background: rgba(255, 255, 255, 0.15);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 12px;
+  text-align: center;
+  padding: 8px;
+  position: absolute;
+  top: 0;
+  left: 0;
+}
+
+.mobile-book-overlay {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.8) 0%, rgba(0, 0, 0, 0.6) 50%, transparent 100%);
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  z-index: 2;
+}
+
+.mobile-book-author {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.9);
+  font-weight: 500;
+  margin: 0;
+}
+
+.mobile-book-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.mobile-book-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #ffffff;
+  margin: 0;
+  line-height: 1.3;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.mobile-book-subtitle {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.7);
+  margin: 0;
+  line-height: 1.3;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
 }
 
 /* 모바일 뷰포트에서 슬라이드 컨트롤 숨김 */
@@ -955,24 +1340,35 @@
 }
 
 .mobile-viewport .section-header {
-  padding: 0 16px;
+  padding: 0 0 0 0 !important;
+  margin-bottom: 12px;
+  margin-left: 0 !important;
+  margin-right: 0 !important;
 }
 
 .mobile-viewport .section-header h2 {
-  font-size: 22px;
+  font-size: 20px;
+  font-weight: 700;
+  color: #ffffff;
+  margin: 0;
 }
 
 .mobile-viewport .book-section {
-  padding: 0 16px;
+  padding: 0 0 0 0 !important;
 }
 
 .mobile-viewport .books-container {
   gap: 12px;
   padding: 5px 0;
+  justify-content: flex-start !important;
+  align-items: flex-start !important;
+  align-self: flex-start !important;
+  width: 100% !important;
+  max-width: 100% !important;
 }
 
 .mobile-viewport .book-card {
-  min-width: 160px;
+  min-width: 140px;
   border-radius: 8px;
 }
 
@@ -1079,7 +1475,7 @@
   }
   
   .book-card {
-    min-width: 160px;
+    min-width: 140px;
     border-radius: 8px;
   }
   

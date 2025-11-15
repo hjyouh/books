@@ -11,7 +11,8 @@ export default defineConfig({
     open: false, // 자동으로 브라우저 열지 않음
     hmr: {
       overlay: false, // 에러 오버레이 비활성화
-      clientPort: 5173, // 클라이언트 포트 명시
+      protocol: 'ws',
+      host: 'localhost',
     },
     watch: {
       usePolling: false,

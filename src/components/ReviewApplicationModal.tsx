@@ -145,13 +145,6 @@ const ReviewApplicationModal: React.FC<ReviewApplicationModalProps> = ({
     }))
   }
 
-  const handleAutoFillAddress = () => {
-    // 주소 자동입력 기능 (실제로는 주소 API 연동)
-    setUserInfo(prev => ({
-      ...prev,
-      address: '서울시 강남구 테헤란로 123'
-    }))
-  }
 
   const handleSubmit = async () => {
     if (!user || !book || !isInfoConfirmed) return
@@ -225,12 +218,14 @@ const ReviewApplicationModal: React.FC<ReviewApplicationModalProps> = ({
           <h2 className="review-application-title">서평을 신청 하시겠습니까?</h2>
           
           <div className="review-application-info">
-            <p className="user-info-message">
-              {userInfo.name}님의 정보가 자동으로 입력되었습니다. 필요시 수정하세요.
-            </p>
-            <p className="review-count-info">
-              미완료 서평: <span className="current-count">{reviewCount.current}</span>개 / 최대 {reviewCount.max}개
-            </p>
+            <div className="user-info-message">
+              <p>{userInfo.name}님의 정보가 자동으로 입력되었습니다.</p>
+              <p>필요시 수정하세요.</p>
+            </div>
+            <div className="review-count-box">
+              <div>현재 미완료 서평: <span className="current-count">{reviewCount.current}</span>개</div>
+              <div>(최대 {reviewCount.max}개까지 신청가능)</div>
+            </div>
           </div>
 
           <div className="form-section">
@@ -273,25 +268,15 @@ const ReviewApplicationModal: React.FC<ReviewApplicationModalProps> = ({
 
             <div className="form-group">
               <label htmlFor="address">주소</label>
-              <div className="address-input-group">
-                <input
-                  type="text"
-                  id="address"
-                  value={userInfo.address}
-                  onChange={(e) => handleInputChange('address', e.target.value)}
-                  className="form-input"
-                  placeholder="서울시 강남구 테헤란로 123"
-                  disabled={loading}
-                />
-                <button 
-                  type="button" 
-                  className="auto-fill-btn"
-                  onClick={handleAutoFillAddress}
-                  disabled={loading}
-                >
-                  자동입력
-                </button>
-              </div>
+              <input
+                type="text"
+                id="address"
+                value={userInfo.address}
+                onChange={(e) => handleInputChange('address', e.target.value)}
+                className="form-input"
+                placeholder="서울시 강남구 테헤란로 123"
+                disabled={loading}
+              />
             </div>
           </div>
 

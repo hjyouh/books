@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom'
+import { BrowserRouter as Router, Routes, Route, Link, useNavigate } from 'react-router-dom'
 import { db, auth } from './firebase'
 import { collection, addDoc, getDocs, Timestamp, doc, getDoc, onSnapshot, query, orderBy, where, updateDoc } from 'firebase/firestore'
 import { onAuthStateChanged, User, signOut } from 'firebase/auth'
@@ -7,6 +7,7 @@ import NewSignupPage from './pages/NewSignupPage'
 import LoginPage from './pages/LoginPage'
 import AdminPage from './pages/AdminPage'
 import UserPage from './pages/UserPage'
+import BookDetailPage from './pages/BookDetailPage'
 import BookDetailModal from './components/BookDetailModal'
 import './App.css'
 
@@ -67,17 +68,41 @@ function App() {
   const [user, setUser] = useState<User | null>(null)
   const [isAdmin, setIsAdmin] = useState(false)
   const [headerName, setHeaderName] = useState('사용자')
-  const [selectedBook, setSelectedBook] = useState<Book | null>(null)
-  const [isModalOpen, setIsModalOpen] = useState(false)
   const [isInitialLoad, setIsInitialLoad] = useState(true) // 초기 로딩 상태
   const [isMobileView, setIsMobileView] = useState(false) // 모바일 뷰 전환 상태
+  const [selectedBook, setSelectedBook] = useState<Book | null>(null)
+  const [isModalOpen, setIsModalOpen] = useState(false)
+
+  // 모바일 뷰 전환 시 body에 클래스 추가/제거 및 localStorage에 저장
+  useEffect(() => {
+    if (isMobileView) {
+      document.body.classList.add('mobile-view-active')
+      localStorage.setItem('isMobileView', 'true')
+    } else {
+      document.body.classList.remove('mobile-view-active')
+      localStorage.setItem('isMobileView', 'false')
+    }
+    
+    return () => {
+      document.body.classList.remove('mobile-view-active')
+    }
+  }, [isMobileView])
+
+  // 페이지 로드 시 모바일 뷰 상태 복원
+  useEffect(() => {
+    const savedMobileView = localStorage.getItem('isMobileView')
+    if (savedMobileView === 'true') {
+      setIsMobileView(true)
+      document.body.classList.add('mobile-view-active')
+    }
+  }, [])
 
   // 실제 모바일 기기에서 접속했을 때 자동으로 모바일 뷰 활성화
   useEffect(() => {
     const checkMobileDevice = () => {
       const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth <= 768
-      if (isMobile) {
-        setIsMobileView(true)
+      if (isMobile && !isMobileView) {
+        // 모바일 기기에서는 자동으로 모바일 뷰 활성화하지 않음 (사용자가 직접 전환)
       }
     }
     
@@ -85,7 +110,7 @@ function App() {
     window.addEventListener('resize', checkMobileDevice)
     
     return () => window.removeEventListener('resize', checkMobileDevice)
-  }, [])
+  }, [isMobileView])
 
   const timestampToMillis = (value: any): number | null => {
     if (!value) return null
@@ -252,8 +277,10 @@ function App() {
     // 5초마다 다음 슬라이드로 이동 (한 슬라이드씩)
     slideIntervalRef.current = setInterval(() => {
       setCurrentSlideIndex((prevIndex) => {
+        // null 체크 강화
+        if (!slides || slides.length === 0) return prevIndex
         // 무한 루프: 마지막 슬라이드에서 다음은 첫 번째 슬라이드
-        return (prevIndex + 1) % slides!.length
+        return (prevIndex + 1) % slides.length
       })
     }, 5000)
 
@@ -276,8 +303,10 @@ function App() {
     // 5초마다 다음 슬라이드로 이동 (한 슬라이드씩)
     adSlideIntervalRef.current = setInterval(() => {
       setCurrentAdSlideIndex((prevIndex) => {
+        // null 체크 강화
+        if (!adSlides || adSlides.length === 0) return prevIndex
         // 무한 루프: 마지막 슬라이드에서 다음은 첫 번째 슬라이드
-        return (prevIndex + 1) % adSlides!.length
+        return (prevIndex + 1) % adSlides.length
       })
     }, 5000)
 
@@ -400,14 +429,22 @@ function App() {
           bookId = bookId.split('/').pop() || bookId
         }
         
-        // Firestore에서 해당 도서 찾기
-        const bookDoc = await getDoc(doc(db, 'books', bookId))
-        if (bookDoc.exists()) {
-          const bookData = { id: bookDoc.id, ...bookDoc.data() } as Book
-          setSelectedBook(bookData)
-          setIsModalOpen(true)
+        if (isMobileView) {
+          // 모바일 뷰: 페이지로 이동 (슬라이드 애니메이션)
+          document.body.classList.add('page-sliding-left')
+          setTimeout(() => {
+            window.location.href = `/book/${bookId}`
+          }, 50)
         } else {
-          console.error('도서를 찾을 수 없습니다:', bookId)
+          // 웹 뷰: Firestore에서 도서 찾아서 모달 표시
+          const bookDoc = await getDoc(doc(db, 'books', bookId))
+          if (bookDoc.exists()) {
+            const bookData = { id: bookDoc.id, ...bookDoc.data() } as Book
+            setSelectedBook(bookData)
+            setIsModalOpen(true)
+          } else {
+            console.error('도서를 찾을 수 없습니다:', bookId)
+          }
         }
       } catch (error) {
         console.error('도서 로딩 오류:', error)
@@ -549,10 +586,25 @@ function App() {
     }
   }
 
-  // 도서 카드 클릭 핸들러
-  const handleBookClick = (book: Book) => {
-    setSelectedBook(book)
-    setIsModalOpen(true)
+  // 도서 카드 클릭 핸들러 (Router 내부에서 navigate 사용)
+  const handleBookClick = (book: Book, navigate?: any) => {
+    if (isMobileView) {
+      // 모바일 뷰: 페이지로 이동 (슬라이드 애니메이션)
+      if (book.id) {
+        document.body.classList.add('page-sliding-left')
+        setTimeout(() => {
+          if (navigate) {
+            navigate(`/book/${book.id}`)
+          } else {
+            window.location.href = `/book/${book.id}`
+          }
+        }, 50)
+      }
+    } else {
+      // 웹 뷰: 모달 표시
+      setSelectedBook(book)
+      setIsModalOpen(true)
+    }
   }
 
   // 모달 닫기 핸들러
@@ -573,10 +625,93 @@ function App() {
     }
   }, [slides, adSlides, loading])
 
+  // 페이지 전환 시 슬라이드 애니메이션 클래스 제거 및 상태 정리
+  useEffect(() => {
+    const handleRouteChange = () => {
+      // 애니메이션 클래스 제거
+      setTimeout(() => {
+        document.body.classList.remove('page-sliding-left', 'page-sliding-right')
+      }, 350)
+      
+      // 슬라이드 인터벌 정리
+      if (slideIntervalRef.current) {
+        clearInterval(slideIntervalRef.current)
+        slideIntervalRef.current = null
+      }
+      if (adSlideIntervalRef.current) {
+        clearInterval(adSlideIntervalRef.current)
+        adSlideIntervalRef.current = null
+      }
+      
+      // 홈페이지로 돌아올 때 모바일 뷰 상태 복원
+      setTimeout(() => {
+        if (window.location.pathname === '/') {
+          const savedMobileView = localStorage.getItem('isMobileView')
+          if (savedMobileView === 'true') {
+            setIsMobileView(true)
+            document.body.classList.add('mobile-view-active')
+          }
+        }
+      }, 100)
+    }
+    
+    // 모바일 뷰 복원 이벤트 리스너
+    const handleRestoreMobileView = () => {
+      const savedMobileView = localStorage.getItem('isMobileView')
+      if (savedMobileView === 'true') {
+        setIsMobileView(true)
+        document.body.classList.add('mobile-view-active')
+      }
+    }
+    
+    // popstate 이벤트 리스너 (뒤로가기/앞으로가기)
+    window.addEventListener('popstate', handleRouteChange)
+    window.addEventListener('restoreMobileView', handleRestoreMobileView)
+    
+    // 초기 로드 시에도 모바일 뷰 상태 확인
+    handleRouteChange()
+    
+    return () => {
+      window.removeEventListener('popstate', handleRouteChange)
+      window.removeEventListener('restoreMobileView', handleRestoreMobileView)
+      handleRouteChange()
+    }
+  }, [])
+
   // 카테고리별 도서 분류
-  const reviewBooks = books.filter(book => book.category === '서평도서')
-  const publishedBooks = books.filter(book => book.category === '출간도서')
-  const recommendedBooks = books.filter(book => book.category === '추천도서')
+  // 서평도서: 제목이 있고, 빈 문자열이 아니며, 테스트 데이터 제외
+  const reviewBooks = books.filter(book => {
+    if (book.category !== '서평도서') return false
+    if (!book.title || book.title.trim() === '') return false
+    const title = book.title.trim()
+    // 테스트 데이터 제외
+    if (title === 'ABC' || title === '책 이미지' || title === '이것저것') return false
+    // author가 없거나 빈 값인 경우도 제외 (유효한 도서만)
+    if (!book.author || book.author.trim() === '') return false
+    return true
+  })
+  // 출간도서: 제목이 있고, 빈 문자열이 아니며, 테스트 데이터 제외
+  const publishedBooks = books.filter(book => {
+    if (book.category !== '출간도서') return false
+    if (!book.title || book.title.trim() === '') return false
+    const title = book.title.trim()
+    // 테스트 데이터 제외
+    if (title === 'ABC' || title === '책 이미지' || title === '이것저것') return false
+    // author가 없거나 빈 값인 경우도 제외 (유효한 도서만)
+    if (!book.author || book.author.trim() === '') return false
+    return true
+  })
+  // 추천도서: 제목이 있고, 빈 문자열이 아니며, 테스트 데이터 제외
+  const recommendedBooks = books.filter(book => {
+    if (book.category !== '추천도서') return false
+    if (!book.title || book.title.trim() === '') return false
+    const title = book.title.trim()
+    // 테스트 데이터 제외
+    if (title === 'ABC' || title === '책 이미지' || title === '이것저것') return false
+    // author가 없거나 빈 값인 경우도 제외 (유효한 도서만)
+    if (!book.author || book.author.trim() === '') return false
+    return true
+  })
 
   // 초기 로딩 중일 때는 흰색 페이지만 표시
   if (isInitialLoad) {
@@ -593,26 +728,81 @@ function App() {
     )
   }
 
-  return (
-    <Router>
-      <Routes>
-        <Route path="/" element={
-          <div className={`publishing-website ${isMobileView ? 'mobile-viewport' : ''}`}>
+  // Router 내부 컴포넌트 (navigate 사용)
+  const HomePage = () => {
+    const navigate = useNavigate()
+    
+    // 슬라이드 클릭 핸들러 (navigate 사용)
+    const handleSlideClickWithNavigate = async (slide: Slide) => {
+      if (!slide.linkUrl) return
+      
+      if (slide.linkType === 'book') {
+        try {
+          let bookId = slide.linkUrl
+          if (bookId.includes('/')) {
+            bookId = bookId.split('/').pop() || bookId
+          }
+          
+          if (isMobileView) {
+            document.body.classList.add('page-sliding-left')
+            setTimeout(() => {
+              navigate(`/book/${bookId}`)
+            }, 50)
+          } else {
+            const bookDoc = await getDoc(doc(db, 'books', bookId))
+            if (bookDoc.exists()) {
+              const bookData = { id: bookDoc.id, ...bookDoc.data() } as Book
+              setSelectedBook(bookData)
+              setIsModalOpen(true)
+            }
+          }
+        } catch (error) {
+          console.error('도서 로딩 오류:', error)
+        }
+      } else {
+        window.open(slide.linkUrl, '_blank', 'noopener,noreferrer')
+      }
+    }
+    
+    return (
+      <div className={`publishing-website ${isMobileView ? 'mobile-viewport' : ''}`}>
             {/* 헤더 */}
             <header className="main-header">
               <div className="header-content">
                 {isMobileView ? (
                   <>
-                    {/* 모바일 뷰: 출판도서만 표시 */}
-                    <div className="logo-section">
-                      <h1 style={{ fontSize: '18px', margin: 0, fontWeight: 700, color: '#ffffff', lineHeight: 1.2 }}>출판도서</h1>
+                    {/* 모바일 뷰: 햄버거 메뉴 + 도서 출판 제목 */}
+                    <button
+                      className="mobile-hamburger-btn"
+                      aria-label="메뉴"
+                      style={{
+                        background: 'none',
+                        border: 'none',
+                        padding: '8px',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center'
+                      }}
+                    >
+                      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M3 12H21M3 6H21M3 18H21" stroke="#ffffff" strokeWidth="2" strokeLinecap="round"/>
+                      </svg>
+                    </button>
+                    <div className="mobile-header-title">
+                      <h1 style={{ fontSize: '18px', margin: 0, fontWeight: 700, color: '#ffffff', lineHeight: 1.2 }}>도서 출판</h1>
                     </div>
-                    {/* 모바일 뷰: Web view 전환 버튼만 */}
+                    {/* 모바일 뷰: Web view 전환 버튼 */}
                     <button
                       onClick={() => setIsMobileView(false)}
                       className="icon-btn mobile-view-btn"
                       aria-label="웹 뷰로 전환"
                       title="웹 뷰로 전환"
+                      style={{
+                        background: 'rgba(255, 255, 255, 0.2)',
+                        border: '1px solid rgba(255, 255, 255, 0.3)',
+                        color: '#ffffff'
+                      }}
                     >
                       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                         <path d="M4 6H20V4H4C2.9 4 2 4.9 2 6V18C2 19.1 2.9 20 4 20H8V18H4V6ZM20 8H8C6.9 8 6 8.9 6 10V20C6 21.1 6.9 22 8 22H20C21.1 22 22 21.1 22 20V10C22 8.9 21.1 8 20 8ZM20 20H8V10H20V20Z" fill="currentColor"/>
@@ -695,16 +885,8 @@ function App() {
             >
               <div 
                 className="carousel-container card-slider-container"
-                style={{
-                  transform: isMobileView
-                    ? `translateX(calc(-${currentSlideIndex} * 260px + ${isDragging ? dragOffset : 0}px + 50% - 130px))`
-                    : (typeof window !== 'undefined' && window.innerWidth <= 768)
-                    ? `translateX(calc(-${currentSlideIndex} * 85% + ${isDragging ? dragOffset : 0}px))`
-                    : `translateX(calc(-${currentSlideIndex} * (460px + 16px)))`,
-                  transition: isDragging ? 'none' : 'transform 0.3s ease-out'
-                }}
               >
-                {/* 모바일에서는 카드 슬라이드 스타일로 표시 */}
+                {/* Stacked Card Slider - 가로 방향 */}
                 {slides.map((slide, index) => {
                   const isActive = index === currentSlideIndex
                   const isPrev = index === (currentSlideIndex - 1 + slides.length) % slides.length
@@ -713,11 +895,11 @@ function App() {
                   return (
                   <div
                     key={`${slide.id}-${index}`}
-                    className={`carousel-slide card-slide ${isActive ? 'active' : ''} ${isPrev ? 'prev' : ''} ${isNext ? 'next' : ''}`}
+                    className={`carousel-slide ${isActive ? 'active' : ''} ${isPrev ? 'prev' : ''} ${isNext ? 'next' : ''}`}
                     onClick={() => {
                       // 스와이프 중이 아닐 때만 클릭 처리
                       if (!isDragging && Math.abs(dragOffset) < 10) {
-                        handleSlideClick(slide)
+                        handleSlideClickWithNavigate(slide)
                       }
                     }}
                     style={{ cursor: slide.linkUrl ? 'pointer' : 'default' }}
@@ -793,74 +975,122 @@ function App() {
             ) : null}
 
             {/* 서평도서 섹션 */}
-            <section className="book-section">
+            {reviewBooks.length > 0 && (
+            <section className={`book-section ${isMobileView ? 'mobile-book-section' : ''} ${isMobileView && reviewBooks.length === 1 ? 'single-book-section' : ''}`}>
               <div className="section-header">
                 <h2>서평도서</h2>
-                <Link to="/reviews" className="more-link">더보기 &gt;</Link>
+                {!isMobileView && <Link to="/reviews" className="more-link">더보기 &gt;</Link>}
               </div>
-              <div className="books-carousel">
-                <div className="books-container">
+              <div className={`books-carousel ${isMobileView && reviewBooks.length === 1 ? 'single-carousel' : ''}`}>
+                <div className={`books-container ${isMobileView ? 'mobile-books-container' : ''} ${isMobileView && reviewBooks.length === 1 ? 'single-card-container' : ''}`}>
                   {reviewBooks.slice(0, 6).map((book, index) => (
-                    <div key={book.id || index} className="book-card" onClick={() => handleBookClick(book)}>
-                      <div className="book-cover">
-                        {book.imageUrl ? (
-                          <img src={book.imageUrl} alt={book.title} />
-                        ) : (
-                          <div className="placeholder-cover"></div>
-                        )}
-                        <div className="book-info">
-                          <h3>{book.title}</h3>
-                          <p className="author">{book.author}</p>
+                    <div key={book.id || index} className={`book-card ${isMobileView ? 'mobile-book-card' : ''}`} onClick={() => handleBookClick(book, navigate)}>
+                      {isMobileView ? (
+                        <div className="mobile-book-card-content">
+                          {book.imageUrl ? (
+                            <img src={book.imageUrl} alt={book.title} className="mobile-book-cover-image" />
+                          ) : (
+                            <div className="mobile-placeholder-cover">책 이미지</div>
+                          )}
+                          <div className="mobile-book-overlay">
+                            <div className="mobile-book-author">{book.author}</div>
+                            <div className="mobile-book-info">
+                              <h3 className="mobile-book-title">{book.title}</h3>
+                              <p className="mobile-book-subtitle">{book.description ? book.description.substring(0, 30) + '...' : '부제'}</p>
+                            </div>
+                          </div>
                         </div>
-                      </div>
+                      ) : (
+                        <div className="book-cover">
+                          {book.imageUrl ? (
+                            <img src={book.imageUrl} alt={book.title} />
+                          ) : (
+                            <div className="placeholder-cover"></div>
+                          )}
+                          <div className="book-info">
+                            <h3>{book.title}</h3>
+                            <p className="author">{book.author}</p>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>
-                <div className="carousel-arrows">
-                  <button className="arrow-left">‹</button>
-                  <button className="arrow-right">›</button>
-                </div>
-                <div className="carousel-dots">
-                  <span className="dot active"></span>
-                  <span className="dot"></span>
-                </div>
+                {!isMobileView && (
+                  <>
+                    <div className="carousel-arrows">
+                      <button className="arrow-left">‹</button>
+                      <button className="arrow-right">›</button>
+                    </div>
+                    <div className="carousel-dots">
+                      <span className="dot active"></span>
+                      <span className="dot"></span>
+                    </div>
+                  </>
+                )}
               </div>
             </section>
+            )}
 
+            {publishedBooks.length > 0 && (
+            <>
             {/* 출간도서 섹션 */}
-            <section className="book-section">
+            <section className={`book-section ${isMobileView ? 'mobile-book-section' : ''} ${isMobileView && publishedBooks.length === 1 ? 'single-book-section' : ''}`}>
               <div className="section-header">
                 <h2>출간도서</h2>
-                <Link to="/published" className="more-link">더보기 &gt;</Link>
+                {!isMobileView && <Link to="/published" className="more-link">더보기 &gt;</Link>}
               </div>
-              <div className="books-carousel">
-                <div className="books-container">
+              <div className={`books-carousel ${isMobileView && publishedBooks.length === 1 ? 'single-carousel' : ''}`}>
+                <div className={`books-container ${isMobileView ? 'mobile-books-container' : ''} ${isMobileView && publishedBooks.length === 1 ? 'single-card-container' : ''}`}>
                   {publishedBooks.slice(0, 6).map((book, index) => (
-                    <div key={book.id || index} className="book-card" onClick={() => handleBookClick(book)}>
-                      <div className="book-cover">
-                        {book.imageUrl ? (
-                          <img src={book.imageUrl} alt={book.title} />
-                        ) : (
-                          <div className="placeholder-cover"></div>
-                        )}
-                        <div className="book-info">
-                          <h3>{book.title}</h3>
-                          <p className="author">{book.author}</p>
+                    <div key={book.id || index} className={`book-card ${isMobileView ? 'mobile-book-card' : ''}`} onClick={() => handleBookClick(book, navigate)}>
+                      {isMobileView ? (
+                        <div className="mobile-book-card-content">
+                          {book.imageUrl ? (
+                            <img src={book.imageUrl} alt={book.title} className="mobile-book-cover-image" />
+                          ) : (
+                            <div className="mobile-placeholder-cover">책 이미지</div>
+                          )}
+                          <div className="mobile-book-overlay">
+                            <div className="mobile-book-author">{book.author}</div>
+                            <div className="mobile-book-info">
+                              <h3 className="mobile-book-title">{book.title}</h3>
+                              <p className="mobile-book-subtitle">{book.description ? book.description.substring(0, 30) + '...' : '부제'}</p>
+                            </div>
+                          </div>
                         </div>
-                      </div>
+                      ) : (
+                        <div className="book-cover">
+                          {book.imageUrl ? (
+                            <img src={book.imageUrl} alt={book.title} />
+                          ) : (
+                            <div className="placeholder-cover"></div>
+                          )}
+                          <div className="book-info">
+                            <h3>{book.title}</h3>
+                            <p className="author">{book.author}</p>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>
-                <div className="carousel-arrows">
-                  <button className="arrow-left">‹</button>
-                  <button className="arrow-right">›</button>
-                </div>
-                <div className="carousel-dots">
-                  <span className="dot active"></span>
-                  <span className="dot"></span>
-                </div>
+                {!isMobileView && (
+                  <>
+                    <div className="carousel-arrows">
+                      <button className="arrow-left">‹</button>
+                      <button className="arrow-right">›</button>
+                    </div>
+                    <div className="carousel-dots">
+                      <span className="dot active"></span>
+                      <span className="dot"></span>
+                    </div>
+                  </>
+                )}
               </div>
             </section>
+            </>
+            )}
 
             {/* 광고 슬라이드 섹션 */}
             {adSlides && adSlides.length > 0 ? (
@@ -878,7 +1108,7 @@ function App() {
                   <div
                     key={`ad-${slide.id}-${index}`}
                     className="carousel-slide"
-                    onClick={() => handleSlideClick(slide)}
+                    onClick={() => handleSlideClickWithNavigate(slide)}
                     style={{ cursor: slide.linkUrl ? 'pointer' : 'default' }}
                   >
                     <div className="slide-content">
@@ -954,40 +1184,65 @@ function App() {
             </section>
             ) : null}
 
+            {recommendedBooks.length > 0 && (
+            <>
             {/* 추천도서 섹션 */}
-            <section className="book-section">
+            <section className={`book-section ${isMobileView ? 'mobile-book-section' : ''} ${isMobileView && recommendedBooks.length === 1 ? 'single-book-section' : ''}`}>
               <div className="section-header">
                 <h2>추천도서</h2>
-                <Link to="/recommended" className="more-link">더보기 &gt;</Link>
+                {!isMobileView && <Link to="/recommended" className="more-link">더보기 &gt;</Link>}
               </div>
-              <div className="books-carousel">
-                <div className="books-container">
+              <div className={`books-carousel ${isMobileView && recommendedBooks.length === 1 ? 'single-carousel' : ''}`}>
+                <div className={`books-container ${isMobileView ? 'mobile-books-container' : ''} ${isMobileView && recommendedBooks.length === 1 ? 'single-card-container' : ''}`}>
                   {recommendedBooks.slice(0, 6).map((book, index) => (
-                    <div key={book.id || index} className="book-card" onClick={() => handleBookClick(book)}>
-                      <div className="book-cover">
-                        {book.imageUrl ? (
-                          <img src={book.imageUrl} alt={book.title} />
-                        ) : (
-                          <div className="placeholder-cover"></div>
-                        )}
-                        <div className="book-info">
-                          <h3>{book.title}</h3>
-                          <p className="author">{book.author}</p>
+                    <div key={book.id || index} className={`book-card ${isMobileView ? 'mobile-book-card' : ''}`} onClick={() => handleBookClick(book, navigate)}>
+                      {isMobileView ? (
+                        <div className="mobile-book-card-content">
+                          {book.imageUrl ? (
+                            <img src={book.imageUrl} alt={book.title} className="mobile-book-cover-image" />
+                          ) : (
+                            <div className="mobile-placeholder-cover">책 이미지</div>
+                          )}
+                          <div className="mobile-book-overlay">
+                            <div className="mobile-book-author">{book.author}</div>
+                            <div className="mobile-book-info">
+                              <h3 className="mobile-book-title">{book.title}</h3>
+                              <p className="mobile-book-subtitle">{book.description ? book.description.substring(0, 30) + '...' : '부제'}</p>
+                            </div>
+                          </div>
                         </div>
-                      </div>
+                      ) : (
+                        <div className="book-cover">
+                          {book.imageUrl ? (
+                            <img src={book.imageUrl} alt={book.title} />
+                          ) : (
+                            <div className="placeholder-cover"></div>
+                          )}
+                          <div className="book-info">
+                            <h3>{book.title}</h3>
+                            <p className="author">{book.author}</p>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>
-                <div className="carousel-arrows">
-                  <button className="arrow-left">‹</button>
-                  <button className="arrow-right">›</button>
-                </div>
-                <div className="carousel-dots">
-                  <span className="dot active"></span>
-                  <span className="dot"></span>
-                </div>
+                {!isMobileView && (
+                  <>
+                    <div className="carousel-arrows">
+                      <button className="arrow-left">‹</button>
+                      <button className="arrow-right">›</button>
+                    </div>
+                    <div className="carousel-dots">
+                      <span className="dot active"></span>
+                      <span className="dot"></span>
+                    </div>
+                  </>
+                )}
               </div>
             </section>
+            </>
+            )}
 
             {/* 푸터 */}
             <footer className="main-footer">
@@ -1019,15 +1274,24 @@ function App() {
               </div>
             </footer>
 
-            {/* 도서 상세 모달 */}
-            <BookDetailModal
-              isOpen={isModalOpen}
-              onClose={handleCloseModal}
-              book={selectedBook}
-              user={user}
-            />
+            {/* 웹 뷰: 도서 상세 모달 */}
+            {!isMobileView && (
+              <BookDetailModal
+                isOpen={isModalOpen}
+                onClose={handleCloseModal}
+                book={selectedBook}
+                user={user}
+              />
+            )}
           </div>
-        } />
+    )
+  }
+
+  return (
+    <Router>
+      <Routes>
+        <Route path="/" element={<HomePage />} />
+        <Route path="/book/:bookId" element={<BookDetailPage />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/signup" element={<NewSignupPage />} />
         <Route path="/admin" element={<AdminPage />} />

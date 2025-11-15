@@ -93,8 +93,8 @@ const BookAddModal: React.FC<BookAddModalProps> = ({ isOpen, onClose, onSuccess,
       setFormData(initialFormData)
       setInitialData(initialFormData)
       setImagePreview(editBook.imageUrl || null)
-      setEditorContent(initialFormData.description)
       setHasChanges(false)
+      // 에디터 내용은 모달이 열린 후 설정되도록 useEffect에서 처리됨
     } else if (!isEditMode && isOpen) {
       // 추가 모드일 때 폼 초기화
       resetForm()
@@ -111,9 +111,11 @@ const BookAddModal: React.FC<BookAddModalProps> = ({ isOpen, onClose, onSuccess,
 
   useEffect(() => {
     if (isOpen && editorRef.current) {
-      editorRef.current.innerHTML = formData.description || ''
+      // 모달이 열릴 때 에디터 내용 설정
+      const description = isEditMode && editBook ? (editBook.description || '') : (formData.description || '')
+      editorRef.current.innerHTML = description
     }
-  }, [isOpen, editBook])
+  }, [isOpen, editBook, isEditMode, formData.description])
 
   useEffect(() => {
     if (formData.postingStart && formData.postingEnd) {
@@ -135,95 +137,84 @@ const BookAddModal: React.FC<BookAddModalProps> = ({ isOpen, onClose, onSuccess,
     }))
   }
 
-  React.useEffect(() => {
-    // Cloudinary 스크립트 로드 확인 및 위젯 초기화
-    const initWidget = () => {
-      if (window.cloudinary) {
-        widgetRef.current = window.cloudinary.createUploadWidget(
-        {
-          cloudName: import.meta.env.VITE_CLOUDINARY_CLOUD_NAME,
-          uploadPreset: import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET,
-          cropping: true,
-          croppingAspectRatio: 0.75, // 3:4 비율 (3/4 = 0.75)
-          maxFiles: 1, // 1장만 업로드 가능
-          multiple: false, // 다중 업로드 비활성화
-          maxFileSize: 10000000, // 10MB 제한
-        },
-          (error: any, result: any) => {
-            if (!error && result && result.event === 'success') {
-              handleCloudinaryUpload(result.info.secure_url)
-            } else if (error) {
-              handleCloudinaryError(error.message || '이미지 업로드 중 오류가 발생했습니다.')
-            }
-          }
-        )
-      }
-    }
+  // Cloudinary 위젯 초기화는 필요할 때만 수행 (지연 초기화)
+  const intervalRef = React.useRef<NodeJS.Timeout | null>(null)
+  const timeoutRef = React.useRef<NodeJS.Timeout | null>(null)
+  const initTimeoutRef = React.useRef<NodeJS.Timeout | null>(null)
 
-    if (window.cloudinary) {
-      initWidget()
-    } else {
-      // Cloudinary 스크립트가 아직 로드되지 않은 경우 대기
-      const checkCloudinary = setInterval(() => {
-        if (window.cloudinary) {
-          initWidget()
-          clearInterval(checkCloudinary)
-        }
-      }, 100)
-
-      // 5초 후 타임아웃
-      setTimeout(() => clearInterval(checkCloudinary), 5000)
-    }
+  // Cloudinary 콜백 함수들 (먼저 선언)
+  const handleCloudinaryUpload = React.useCallback((url: string) => {
+    setFormData(prev => ({
+      ...prev,
+      coverImageUrl: url
+    }))
+    setImagePreview(url)
   }, [])
 
-  const openUploadWidget = () => {
-    console.log('+ 버튼 클릭됨')
-    console.log('widgetRef.current:', widgetRef.current)
-    console.log('window.cloudinary:', window.cloudinary)
-    
-    if (widgetRef.current) {
-      console.log('위젯 열기 시도 (기존 위젯 사용)')
-      try {
-        widgetRef.current.open()
-      } catch (error) {
-        console.error('위젯 열기 오류:', error)
-        // 위젯 재생성 시도
-        initNewWidget()
-      }
-    } else if (window.cloudinary) {
-      console.log('새 위젯 생성 및 열기')
-      initNewWidget()
-    } else {
-      console.error('Cloudinary가 로드되지 않았습니다.')
-      alert('이미지 업로드 서비스를 불러올 수 없습니다. 페이지를 새로고침해주세요.')
-      
-      // Cloudinary 스크립트 동적 로드 시도
-      if (!document.querySelector('script[src*="cloudinary"]')) {
-        const script = document.createElement('script')
-        script.src = 'https://upload-widget.cloudinary.com/global/all.js'
-        script.async = true
-        script.onload = () => {
-          console.log('Cloudinary 스크립트 로드 완료')
-          setTimeout(() => {
-            initNewWidget()
-          }, 500)
+  const handleCloudinaryError = React.useCallback((error: string) => {
+    console.error('Cloudinary 업로드 오류:', error)
+    alert(error)
+  }, [])
+
+  // 모달이 닫힐 때 위젯 정리
+  React.useEffect(() => {
+    if (!isOpen) {
+      // 모달이 닫힐 때 위젯 정리
+      if (widgetRef.current && typeof widgetRef.current.destroy === 'function') {
+        try {
+          widgetRef.current.destroy()
+        } catch (error) {
+          // 무시 (이미 정리되었을 수 있음)
         }
-        document.head.appendChild(script)
+        widgetRef.current = null
+      }
+      // 타이머 정리
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current)
+        intervalRef.current = null
+      }
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current)
+        timeoutRef.current = null
+      }
+      if (initTimeoutRef.current) {
+        clearTimeout(initTimeoutRef.current)
+        initTimeoutRef.current = null
       }
     }
-  }
-  
-  const initNewWidget = () => {
-    if (!window.cloudinary) {
-      console.error('Cloudinary가 아직 로드되지 않았습니다.')
+  }, [isOpen])
+
+  // 위젯 초기화 함수 (필요할 때만 호출)
+  const initWidget = React.useCallback(() => {
+    // 모달이 닫혔으면 중단
+    if (!isOpen) {
       return
     }
+
+    // 이미 위젯이 있으면 재생성하지 않음
+    if (widgetRef.current) {
+      return
+    }
+
+    const cloudinary = (window as any).cloudinary
+    if (!cloudinary || typeof cloudinary.createUploadWidget !== 'function') {
+      return
+    }
+
+    // 환경 변수 확인
+    const cloudName = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME
+    const uploadPreset = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET
     
+    if (!cloudName || !uploadPreset) {
+      console.warn('Cloudinary 환경 변수가 설정되지 않았습니다.')
+      return
+    }
+
     try {
-      const widget = window.cloudinary.createUploadWidget(
+      const widget = cloudinary.createUploadWidget(
         {
-          cloudName: import.meta.env.VITE_CLOUDINARY_CLOUD_NAME,
-          uploadPreset: import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET,
+          cloudName: cloudName,
+          uploadPreset: uploadPreset,
           cropping: true,
           croppingAspectRatio: 0.75, // 3:4 비율 (3/4 = 0.75)
           maxFiles: 1, // 1장만 업로드 가능
@@ -238,25 +229,108 @@ const BookAddModal: React.FC<BookAddModalProps> = ({ isOpen, onClose, onSuccess,
           }
         }
       )
-      widgetRef.current = widget
-      widget.open()
+      
+      // 위젯이 제대로 생성되었는지 확인
+      if (widget && typeof widget === 'object' && widget !== null) {
+        widgetRef.current = widget
+      } else {
+        console.warn('Cloudinary 위젯 생성 실패: 유효하지 않은 위젯 객체')
+        widgetRef.current = null
+      }
     } catch (error) {
-      console.error('위젯 생성 오류:', error)
-      alert('이미지 업로드 위젯을 생성할 수 없습니다.')
+      console.error('Cloudinary 위젯 생성 오류:', error)
+      widgetRef.current = null
     }
-  }
+  }, [isOpen, handleCloudinaryUpload, handleCloudinaryError])
 
-  const handleCloudinaryUpload = (url: string) => {
-    setFormData(prev => ({
-      ...prev,
-      coverImageUrl: url
-    }))
-    setImagePreview(url)
-  }
-
-  const handleCloudinaryError = (error: string) => {
-    console.error('Cloudinary 업로드 오류:', error)
-    alert(error)
+  const openUploadWidget = () => {
+    // 위젯이 있고 open 메서드가 있으면 열기
+    if (widgetRef.current && typeof widgetRef.current.open === 'function') {
+      try {
+        widgetRef.current.open()
+        return
+      } catch (error) {
+        console.error('위젯 열기 오류:', error)
+        // 위젯이 손상되었을 수 있으므로 재생성
+        widgetRef.current = null
+      }
+    }
+    
+    // 위젯이 없으면 초기화 시도
+    const cloudinary = (window as any).cloudinary
+    
+    if (cloudinary && typeof cloudinary.createUploadWidget === 'function') {
+      // 위젯 초기화
+      initWidget()
+      // 초기화 후 약간의 지연을 두고 열기 시도
+      setTimeout(() => {
+        if (widgetRef.current && typeof widgetRef.current.open === 'function') {
+          try {
+            widgetRef.current.open()
+          } catch (error) {
+            console.error('위젯 열기 오류:', error)
+          }
+        }
+      }, 200)
+      return
+    }
+    
+    // Cloudinary가 로드되지 않았으면 스크립트 로드 시도
+    console.log('Cloudinary 스크립트 로드 중...')
+    
+    // 이미 스크립트가 로드 중이거나 로드되어 있는지 확인
+    const existingScript = document.querySelector('script[src*="cloudinary"]')
+    if (existingScript) {
+      // 스크립트가 있으면 로드를 기다림
+      const checkCloudinary = setInterval(() => {
+        const cloudinary = (window as any).cloudinary
+        if (cloudinary && typeof cloudinary.createUploadWidget === 'function') {
+          clearInterval(checkCloudinary)
+          initWidget()
+          setTimeout(() => {
+            if (widgetRef.current && typeof widgetRef.current.open === 'function') {
+              try {
+                widgetRef.current.open()
+              } catch (error) {
+                console.error('위젯 열기 오류:', error)
+              }
+            }
+          }, 200)
+        }
+      }, 100)
+      
+      setTimeout(() => {
+        clearInterval(checkCloudinary)
+      }, 5000)
+    } else {
+      // 스크립트가 없으면 새로 로드
+      const script = document.createElement('script')
+      script.src = 'https://upload-widget.cloudinary.com/global/all.js'
+      script.async = true
+      script.onload = () => {
+        console.log('Cloudinary 스크립트 로드 완료')
+        setTimeout(() => {
+          const cloudinary = (window as any).cloudinary
+          if (cloudinary && typeof cloudinary.createUploadWidget === 'function') {
+            initWidget()
+            setTimeout(() => {
+              if (widgetRef.current && typeof widgetRef.current.open === 'function') {
+                try {
+                  widgetRef.current.open()
+                } catch (error) {
+                  console.error('위젯 열기 오류:', error)
+                }
+              }
+            }, 200)
+          }
+        }, 500)
+      }
+      script.onerror = () => {
+        console.error('Cloudinary 스크립트 로드 실패')
+        alert('이미지 업로드 서비스를 불러올 수 없습니다. 페이지를 새로고침해주세요.')
+      }
+      document.head.appendChild(script)
+    }
   }
 
   const removeImage = () => {
@@ -439,7 +513,10 @@ const BookAddModal: React.FC<BookAddModalProps> = ({ isOpen, onClose, onSuccess,
       purchaseUrl: ''
     })
     setImagePreview(null)
-    setEditorContent('')
+    // 에디터 초기화는 모달이 열려있을 때만 수행
+    if (isOpen && editorRef.current) {
+      editorRef.current.innerHTML = ''
+    }
   }
 
   const handleClose = () => {

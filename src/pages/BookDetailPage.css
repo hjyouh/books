@@ -1,0 +1,355 @@
+/* 도서 상세 페이지 */
+.book-detail-page {
+  min-height: 100vh;
+  background-color: #2a2a2a;
+  color: #ffffff;
+  display: flex;
+  flex-direction: column;
+  max-width: 375px;
+  width: 100%;
+  margin: 0 auto;
+  position: relative;
+  overflow-x: hidden;
+}
+
+/* 모바일 뷰에서도 도서 상세 페이지가 보이도록 */
+body.mobile-view-active .book-detail-page {
+  max-width: 375px;
+  width: 375px;
+  margin: 0 auto;
+}
+
+/* 로딩 및 에러 상태 */
+.loading-container,
+.error-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  padding: 20px;
+}
+
+.error-container button {
+  margin-top: 16px;
+  padding: 12px 24px;
+  background: #667eea;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 16px;
+}
+
+/* 헤더 */
+.book-detail-header {
+  padding: 12px 16px;
+  background-color: #2a2a2a;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 100;
+  width: 100%;
+  max-width: 375px;
+  margin: 0 auto;
+}
+
+.back-button {
+  background: none;
+  border: none;
+  color: #ffffff;
+  font-size: 24px;
+  cursor: pointer;
+  padding: 4px 8px;
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+}
+
+.header-title-section {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.header-left {
+  flex: 1;
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  align-items: flex-start;
+}
+
+.header-left .header-info-item {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 4px;
+  width: 100%;
+  justify-content: flex-start;
+}
+
+.book-title-header {
+  font-size: 20px;
+  font-weight: 700;
+  margin: 0;
+  padding: 0;
+  color: #A1C5FF;
+  line-height: 1.3;
+}
+
+.book-author-header {
+  font-size: 16px;
+  margin: 0;
+  padding: 0;
+  color: #ffffff;
+}
+
+.header-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+  text-align: right;
+  flex-shrink: 0;
+  font-size: 14px;
+}
+
+.header-info-item {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 4px;
+}
+
+.info-label {
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.info-value {
+  font-size: 14px;
+  color: #ffffff;
+  font-weight: 400;
+}
+
+/* 메인 컨텐츠 */
+.book-detail-main {
+  flex: 1;
+  padding: 16px;
+  padding-top: 100px; /* 헤더 공간 확보 */
+  padding-bottom: 80px; /* 하단 버튼 공간 확보 */
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  margin-top: 0;
+}
+
+/* 책 이미지와 연속된 내용 섹션 */
+.book-content-flow-section {
+  padding: 0 16px;
+  margin-bottom: 0;
+  position: relative;
+}
+
+/* 1. 표지 이미지 영역 */
+.book-image-flow {
+  width: 120px;
+  height: 180px;
+  border-radius: 8px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.1);
+  float: left;
+  margin-right: 12px;
+  margin-bottom: 12px;
+  shape-outside: margin-box;
+  flex-shrink: 0;
+  display: flex;
+  align-items: stretch;
+}
+
+.book-image-flow img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  flex: 1;
+}
+
+.book-image-placeholder {
+  width: 100%;
+  height: 100%;
+  min-height: 180px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 12px;
+}
+
+/* 2. Text 시작 영역 (이미지 옆) */
+.book-description-start {
+  /* float된 이미지 옆에서 시작하도록 설정 */
+  display: block;
+  min-height: 180px;
+}
+
+.book-description-full {
+  font-size: 14px;
+  line-height: 1.7;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.book-description-full p {
+  margin: 0 0 12px 0;
+}
+
+.book-description-full p:last-child {
+  margin-bottom: 0;
+}
+
+/* 3. Text 연속으로 넣는 영역 (이미지 아래, 전체 너비) */
+.book-content-flow-section::after {
+  content: "";
+  display: table;
+  clear: both;
+}
+
+.book-description-continue {
+  padding: 0 16px;
+  margin-top: 0;
+  clear: both;
+}
+
+.book-description-continue .book-description-full {
+  font-size: 14px;
+  line-height: 1.7;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+/* 하단 액션 버튼 */
+.book-detail-footer {
+  padding: 12px 16px;
+  background-color: #2a2a2a;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 100;
+  max-width: 375px;
+  margin: 0 auto;
+}
+
+.footer-buttons-container {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.review-apply-button,
+.purchase-link-button {
+  background: transparent;
+  border: none;
+  padding: 0;
+  font-size: 15px;
+  font-weight: 400;
+  cursor: pointer;
+  transition: opacity 0.2s ease;
+  color: #A1C5FF;
+}
+
+.review-apply-button {
+  text-align: left;
+}
+
+.purchase-link-button {
+  text-align: right;
+}
+
+.review-apply-button:hover,
+.purchase-link-button:hover {
+  opacity: 0.8;
+}
+
+.review-apply-button:active,
+.purchase-link-button:active {
+  opacity: 0.6;
+}
+
+/* 전체 화면 이미지 뷰어 */
+.full-image-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.95);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.full-image-close {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  background: rgba(255, 255, 255, 0.2);
+  border: none;
+  color: #ffffff;
+  font-size: 32px;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1001;
+  transition: background 0.2s ease;
+}
+
+.full-image-close:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.full-image {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  border-radius: 8px;
+}
+
+/* 모바일 반응형 */
+@media (max-width: 768px) {
+  .book-preview-section {
+    flex-direction: column;
+  }
+
+  .book-image-preview {
+    width: 100%;
+    max-width: 200px;
+    margin: 0 auto;
+  }
+
+  .header-title-section {
+    flex-direction: column;
+  }
+
+  .header-right {
+    align-items: flex-start;
+    text-align: left;
+    margin-top: 12px;
+  }
+
+  .book-detail-footer {
+    flex-direction: column;
+  }
+}
+
