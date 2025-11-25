@@ -5,17 +5,24 @@
   color: #ffffff;
   display: flex;
   flex-direction: column;
-  max-width: 375px;
+  max-width: 100vw; /* 기본값: 기기 화면 너비에 맞춤 */
   width: 100%;
   margin: 0 auto;
   position: relative;
   overflow-x: hidden;
 }
 
-/* 모바일 뷰에서도 도서 상세 페이지가 보이도록 */
-body.mobile-view-active .book-detail-page {
-  max-width: 375px;
+/* 웹에서 모바일 뷰 테스트 시: 375px 고정 */
+body.mobile-view-active:not(.actual-mobile-device) .book-detail-page {
+  max-width: 375px; /* 웹 테스트용 고정 크기 */
   width: 375px;
+  margin: 0 auto;
+}
+
+/* 실제 모바일 기기: 기기별 화면 너비에 맞춤 */
+body.mobile-view-active.actual-mobile-device .book-detail-page {
+  max-width: 100vw; /* 실제 모바일 기기 화면 너비에 맞춤 */
+  width: 100%;
   margin: 0 auto;
 }
 
@@ -52,7 +59,7 @@ body.mobile-view-active .book-detail-page {
   right: 0;
   z-index: 100;
   width: 100%;
-  max-width: 375px;
+  max-width: 100vw; /* 기본값: 기기 화면 너비에 맞춤 */
   margin: 0 auto;
 }
 

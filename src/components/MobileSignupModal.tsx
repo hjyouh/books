@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { collection, query, where, getDocs, Timestamp, doc, setDoc } from 'firebase/firestore';
 import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
 import { db, auth } from '../firebase';
@@ -68,14 +68,13 @@ interface UserData {
   createdAt: Timestamp;
 }
 
-interface NewSignupModalProps {
+interface MobileSignupModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSuccess?: () => void;
-  isAdmin?: boolean; // 관리자 모드인지 구분
 }
 
-const NewSignupModal: React.FC<NewSignupModalProps> = ({ isOpen, onClose, onSuccess, isAdmin = false }) => {
+const MobileSignupModal: React.FC<MobileSignupModalProps> = ({ isOpen, onClose, onSuccess }) => {
   const [formData, setFormData] = useState<FormData>({
     id: '',
     password: '',
@@ -100,7 +99,81 @@ const NewSignupModal: React.FC<NewSignupModalProps> = ({ isOpen, onClose, onSucc
   });
   const [isAddressConfirmed, setIsAddressConfirmed] = useState(false);
 
-  const resetForm = useCallback(() => {
+  // 모달이 열릴 때 폼 초기화
+  useEffect(() => {
+    if (isOpen) {
+      resetForm();
+    }
+  }, [isOpen]);
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+    
+    if (name === 'id') {
+      setIsIdChecked(false);
+    }
+    if (name === 'email') {
+      setIsEmailChecked(false);
+    }
+    if (name === 'phone') {
+      setIsPhoneVerified(false);
+    }
+    // 블로그 URL 자동 검증
+    if (name === 'blog') {
+      const trimmedValue = value.trim();
+      if (trimmedValue) {
+        // URL 형식 검증 (http:// 또는 https://로 시작하거나, 도메인 형식이면 유효)
+        const urlPattern = /^(https?:\/\/)?([\da-z\.-]+)\.([a-z\.]{2,6})([\/\w \.-]*)*\/?$/;
+        const isValid = urlPattern.test(trimmedValue) || trimmedValue.startsWith('http://') || trimmedValue.startsWith('https://');
+        setUrlValidation(prev => ({
+          ...prev,
+          blog: { isValid, isChecking: false }
+        }));
+      } else {
+        setUrlValidation(prev => ({
+          ...prev,
+          blog: { isValid: false, isChecking: false }
+        }));
+      }
+    }
+    
+    // 인스타그램 URL 자동 검증
+    if (name === 'instagram') {
+      const trimmedValue = value.trim();
+      if (trimmedValue) {
+        // @로 시작하거나 URL 형식이면 유효한 것으로 간주
+        const isValid = trimmedValue.startsWith('@') || 
+                       trimmedValue.startsWith('http://') || 
+                       trimmedValue.startsWith('https://') ||
+                       /^[a-zA-Z0-9._]+$/.test(trimmedValue);
+        setUrlValidation(prev => ({
+          ...prev,
+          instagram: { isValid, isChecking: false }
+        }));
+      } else {
+        setUrlValidation(prev => ({
+          ...prev,
+          instagram: { isValid: false, isChecking: false }
+        }));
+      }
+    }
+    if (name === 'address') {
+      setIsAddressConfirmed(false);
+    }
+    
+    if (errors[name as keyof FormData]) {
+      setErrors(prev => ({
+        ...prev,
+        [name]: ''
+      }));
+    }
+  };
+
+  const resetForm = () => {
     setFormData({
       id: '',
       password: '',
@@ -122,47 +195,6 @@ const NewSignupModal: React.FC<NewSignupModalProps> = ({ isOpen, onClose, onSucc
       instagram: { isValid: false, isChecking: false }
     });
     setIsAddressConfirmed(false);
-  }, []);
-
-  // 모달이 열릴 때 폼 초기화
-  useEffect(() => {
-    if (isOpen) {
-      resetForm();
-    }
-  }, [isOpen, resetForm]);
-
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
-    
-    if (name === 'id') {
-      setIsIdChecked(false);
-    }
-    if (name === 'email') {
-      setIsEmailChecked(false);
-    }
-    if (name === 'phone') {
-      setIsPhoneVerified(false);
-    }
-    if (name === 'blog' || name === 'instagram') {
-      setUrlValidation(prev => ({
-        ...prev,
-        [name]: { isValid: false, isChecking: false }
-      }));
-    }
-    if (name === 'address') {
-      setIsAddressConfirmed(false);
-    }
-    
-    if (errors[name as keyof FormData]) {
-      setErrors(prev => ({
-        ...prev,
-        [name]: ''
-      }));
-    }
   };
 
   const checkIdDuplicate = async (id: string): Promise<boolean> => {
@@ -185,6 +217,18 @@ const NewSignupModal: React.FC<NewSignupModalProps> = ({ isOpen, onClose, onSucc
       return querySnapshot.empty;
     } catch (error) {
       console.error('이메일 중복 확인 중 오류:', error);
+      return false;
+    }
+  };
+
+  const checkPhoneDuplicate = async (phone: string): Promise<boolean> => {
+    try {
+      const usersRef = collection(db, 'users');
+      const q = query(usersRef, where('phone', '==', phone));
+      const querySnapshot = await getDocs(q);
+      return querySnapshot.empty;
+    } catch (error) {
+      console.error('휴대폰 중복 확인 중 오류:', error);
       return false;
     }
   };
@@ -372,7 +416,7 @@ const NewSignupModal: React.FC<NewSignupModalProps> = ({ isOpen, onClose, onSucc
     }
   };
 
-  const handlePhoneAuth = () => {
+  const handlePhoneAuth = async () => {
     if (!formData.phone.trim()) {
       alert('휴대폰 번호를 입력해주세요');
       return;
@@ -381,6 +425,17 @@ const NewSignupModal: React.FC<NewSignupModalProps> = ({ isOpen, onClose, onSucc
     const phoneRegex = /^010-\d{4}-\d{4}$/;
     if (!phoneRegex.test(formData.phone.trim())) {
       alert('010-0000-0000 형식으로 입력해 주세요');
+      setIsPhoneVerified(false);
+      setErrors(prev => ({ ...prev, phone: '올바른 형식으로 입력해 주세요' }));
+      return;
+    }
+
+    // 중복 체크
+    const isNotDuplicate = await checkPhoneDuplicate(formData.phone.trim());
+    if (!isNotDuplicate) {
+      alert('이미 등록된 휴대폰 번호입니다.');
+      setIsPhoneVerified(false);
+      setErrors(prev => ({ ...prev, phone: '이미 등록된 번호입니다' }));
       return;
     }
 
@@ -424,7 +479,6 @@ const NewSignupModal: React.FC<NewSignupModalProps> = ({ isOpen, onClose, onSucc
     }
   };
 
-  // URL 형식 검증 함수
   const isValidUrl = (url: string): boolean => {
     try {
       new URL(url);
@@ -434,7 +488,6 @@ const NewSignupModal: React.FC<NewSignupModalProps> = ({ isOpen, onClose, onSucc
     }
   };
 
-  // 인스타그램 URL 형식 변환 함수
   const formatInstagramUrl = (input: string): string => {
     if (!input.trim()) return '';
     
@@ -450,7 +503,6 @@ const NewSignupModal: React.FC<NewSignupModalProps> = ({ isOpen, onClose, onSucc
     return `https://www.instagram.com/${input}`;
   };
 
-  // URL 접근 가능성 확인 함수
   const checkUrlAccessibility = async (url: string): Promise<boolean> => {
     try {
       if (!isValidUrl(url)) {
@@ -550,43 +602,46 @@ const NewSignupModal: React.FC<NewSignupModalProps> = ({ isOpen, onClose, onSucc
 
   if (!isOpen) return null;
 
-  // 버튼 스타일 객체
   const getButtonStyle = (_type: 'default' | 'verified', isVerified: boolean) => {
     if (isVerified) {
       return {
         backgroundColor: '#3b82f6',
         color: 'white',
         border: '2px solid #3b82f6',
-        padding: '10px 12px',
+        padding: '6px 8px',
         borderRadius: '6px',
-        fontSize: '12px',
+        fontSize: '10px',
         fontWeight: '600',
         cursor: 'pointer',
         transition: 'all 0.2s',
-        minWidth: '80px',
-        height: '42px',
+        minWidth: '60px',
+        width: 'auto',
+        height: '36px',
         boxSizing: 'border-box' as const,
         display: 'flex',
         alignItems: 'center',
-        justifyContent: 'center'
+        justifyContent: 'center',
+        whiteSpace: 'nowrap'
       };
     } else {
       return {
         backgroundColor: 'transparent',
         color: '#d1d5db',
         border: '2px solid rgba(209, 213, 219, 0.3)',
-        padding: '10px 12px',
+        padding: '6px 8px',
         borderRadius: '6px',
-        fontSize: '12px',
+        fontSize: '10px',
         fontWeight: '600',
         cursor: 'pointer',
         transition: 'all 0.2s',
-        minWidth: '80px',
-        height: '42px',
+        minWidth: '60px',
+        width: 'auto',
+        height: '36px',
         boxSizing: 'border-box' as const,
         display: 'flex',
         alignItems: 'center',
-        justifyContent: 'center'
+        justifyContent: 'center',
+        whiteSpace: 'nowrap'
       };
     }
   };
@@ -596,14 +651,16 @@ const NewSignupModal: React.FC<NewSignupModalProps> = ({ isOpen, onClose, onSucc
       backgroundColor: confirmed ? '#3b82f6' : 'transparent',
       color: confirmed ? '#ffffff' : '#d1d5db',
       border: confirmed ? '2px solid #3b82f6' : '2px solid rgba(209, 213, 219, 0.3)',
-      padding: '10px 12px',
+      padding: '6px 8px',
       borderRadius: '6px',
-      fontSize: '12px',
+      fontSize: '10px',
       fontWeight: '600',
       cursor: 'pointer',
       transition: 'all 0.2s',
-      minWidth: '80px',
-      height: '42px',
+      minWidth: '60px',
+      width: 'auto',
+      height: '36px',
+      whiteSpace: 'nowrap',
       boxSizing: 'border-box' as const,
       display: 'flex',
       alignItems: 'center',
@@ -618,14 +675,13 @@ const NewSignupModal: React.FC<NewSignupModalProps> = ({ isOpen, onClose, onSucc
         backgroundColor: '#ff6b35',
         color: 'white',
         border: '2px solid #ff6b35',
-        padding: '0 20px',
+        padding: '0 8px',
         borderRadius: '8px',
-        fontSize: '16px',
+        fontSize: '13px',
         fontWeight: '600',
         cursor: 'pointer',
         transition: 'all 0.3s',
-        minWidth: '120px',
-        height: '44px',
+        height: '36px',
         boxSizing: 'border-box' as const,
         boxShadow: '0 8px 25px rgba(255, 107, 53, 0.4)',
         display: 'flex',
@@ -638,14 +694,13 @@ const NewSignupModal: React.FC<NewSignupModalProps> = ({ isOpen, onClose, onSucc
         backgroundColor: 'transparent',
         color: '#d1d5db',
         border: '2px solid rgba(209, 213, 219, 0.3)',
-        padding: '0 20px',
+        padding: '0 8px',
         borderRadius: '8px',
-        fontSize: '16px',
+        fontSize: '13px',
         fontWeight: '600',
         cursor: 'pointer',
         transition: 'all 0.3s',
-        minWidth: '120px',
-        height: '44px',
+        height: '36px',
         boxSizing: 'border-box' as const,
         boxShadow: 'none',
         display: 'flex',
@@ -666,16 +721,17 @@ const NewSignupModal: React.FC<NewSignupModalProps> = ({ isOpen, onClose, onSucc
       backgroundColor: 'rgba(0, 0, 0, 0.7)',
       display: 'flex',
       justifyContent: 'center',
-      alignItems: 'center',
+      alignItems: 'flex-start',
       zIndex: 2000,
-      padding: '20px'
+      padding: '10px',
+      paddingTop: '80px'
     }} onClick={onClose}>
       <div style={{
         background: 'rgba(0, 0, 0, 0.7)',
         backdropFilter: 'blur(4px)',
         borderRadius: '12px',
         width: '100%',
-        maxWidth: '800px',
+        maxWidth: '340px',
         maxHeight: '90vh',
         overflowY: 'auto',
         boxShadow: '0 20px 40px rgba(0, 0, 0, 0.3)'
@@ -686,22 +742,25 @@ const NewSignupModal: React.FC<NewSignupModalProps> = ({ isOpen, onClose, onSucc
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
-          padding: '16px 24px',
+          padding: '12px 16px',
           borderBottom: '1px solid rgba(209, 213, 219, 0.3)',
           borderRadius: '12px 12px 0 0'
         }}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-            <h2 style={{ margin: 0, fontSize: '1.5rem', fontWeight: '600', color: '#d1d5db' }}>{isAdmin ? '회원 추가' : '회원가입'}</h2>
+            <h2 style={{ margin: 0, fontSize: '18px', fontWeight: '600', color: '#d1d5db' }}>회원가입</h2>
+            <span style={{ fontSize: '13px', color: '#ffd700', lineHeight: 1.2 }}>
+              중복확인/확인/아이콘 버튼을 눌러 확인해 주세요
+            </span>
           </div>
           <button style={{
             background: 'none',
             border: 'none',
-            fontSize: '24px',
+            fontSize: '20px',
             color: '#d1d5db',
             cursor: 'pointer',
             padding: '0',
-            width: '30px',
-            height: '30px',
+            width: '24px',
+            height: '24px',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
@@ -711,11 +770,11 @@ const NewSignupModal: React.FC<NewSignupModalProps> = ({ isOpen, onClose, onSucc
         </div>
 
         {/* 폼 */}
-        <form onSubmit={handleSubmit} style={{ padding: '16px 20px' }}>
+        <form onSubmit={handleSubmit} style={{ padding: '12px 15px' }}>
           
           {/* ID 필드 */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px', flexWrap: 'nowrap' }}>
-            <label style={{ fontWeight: '600', color: '#d1d5db', fontSize: '14px', minWidth: '80px', flexShrink: 0, textAlign: 'left' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px', flexWrap: 'nowrap' }}>
+            <label style={{ fontWeight: '600', color: '#d1d5db', fontSize: '12px', minWidth: '70px', flexShrink: 0, textAlign: 'left' }}>
               회원ID *
             </label>
             <input
@@ -725,16 +784,16 @@ const NewSignupModal: React.FC<NewSignupModalProps> = ({ isOpen, onClose, onSucc
               onChange={handleInputChange}
               placeholder="ID를 6자 이상으로 입력해 주세요"
               style={{
-                flex: 1,
-                padding: '10px 12px',
+                width: '170px',
+                padding: '8px 8px',
                 border: errors.id ? '2px solid #e53e3e' : '2px solid rgba(209, 213, 219, 0.3)',
                 borderRadius: '6px',
-                fontSize: '14px',
+                fontSize: '12px',
                 backgroundColor: 'rgba(255, 255, 255, 0.1)',
                 color: '#d1d5db',
-                height: '42px',
+                height: '36px',
                 boxSizing: 'border-box',
-                minWidth: 0
+                flexShrink: 0
               }}
               autoComplete="off"
             />
@@ -752,8 +811,8 @@ const NewSignupModal: React.FC<NewSignupModalProps> = ({ isOpen, onClose, onSucc
           {errors.id && <div style={{ color: '#e53e3e', fontSize: '12px', marginBottom: '10px', marginLeft: '72px' }}>{errors.id}</div>}
 
           {/* 비밀번호 필드 */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px', flexWrap: 'nowrap' }}>
-            <label style={{ fontWeight: '600', color: '#d1d5db', fontSize: '14px', minWidth: '80px', flexShrink: 0, textAlign: 'left' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px', flexWrap: 'nowrap' }}>
+            <label style={{ fontWeight: '600', color: '#d1d5db', fontSize: '12px', minWidth: '70px', flexShrink: 0, textAlign: 'left' }}>
               비밀번호 *
             </label>
             <input
@@ -761,26 +820,26 @@ const NewSignupModal: React.FC<NewSignupModalProps> = ({ isOpen, onClose, onSucc
               name="password"
               value={formData.password}
               onChange={handleInputChange}
-              placeholder="비밀번호를 입력하세요"
+              placeholder="비밀번호 입력"
               style={{
-                flex: 1,
-                padding: '10px 12px',
+                width: '170px',
+                padding: '8px 8px',
                 border: errors.password ? '2px solid #e53e3e' : '2px solid rgba(209, 213, 219, 0.3)',
                 borderRadius: '6px',
-                fontSize: '14px',
+                fontSize: '12px',
                 backgroundColor: 'rgba(255, 255, 255, 0.1)',
                 color: '#d1d5db',
-                height: '42px',
+                height: '36px',
                 boxSizing: 'border-box',
-                minWidth: 0
+                flexShrink: 0
               }}
               autoComplete="new-password"
             />
           </div>
           
           {/* 비밀번호 확인 필드 */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px', flexWrap: 'nowrap' }}>
-            <label style={{ fontWeight: '600', color: '#d1d5db', fontSize: '14px', minWidth: '80px', flexShrink: 0, textAlign: 'left' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px', flexWrap: 'nowrap' }}>
+            <label style={{ fontWeight: '600', color: '#d1d5db', fontSize: '12px', minWidth: '70px', flexShrink: 0, textAlign: 'left' }}>
               비밀번호확인 *
             </label>
             <input
@@ -788,31 +847,41 @@ const NewSignupModal: React.FC<NewSignupModalProps> = ({ isOpen, onClose, onSucc
               name="confirmPassword"
               value={formData.confirmPassword}
               onChange={handleInputChange}
-              placeholder="비밀번호를 다시 입력하세요"
+              placeholder="비밀번호를 다시 입력해 주세요"
               style={{
-                flex: 1,
-                padding: '10px 12px',
+                width: '170px',
+                padding: '8px 8px',
                 border: errors.confirmPassword ? '2px solid #e53e3e' : '2px solid rgba(209, 213, 219, 0.3)',
                 borderRadius: '6px',
-                fontSize: '14px',
+                fontSize: '12px',
                 backgroundColor: 'rgba(255, 255, 255, 0.1)',
                 color: '#d1d5db',
-                height: '42px',
+                height: '36px',
                 boxSizing: 'border-box',
-                minWidth: 0
+                flexShrink: 0
               }}
               autoComplete="new-password"
             />
+            <span style={{ 
+              fontSize: '18px', 
+              color: (formData.password && formData.password === formData.confirmPassword) ? '#3b82f6' : '#d1d5db', 
+              flexShrink: 0,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              height: '36px',
+              width: '60px'
+            }}>✓</span>
           </div>
           {(errors.password || errors.confirmPassword) && (
-            <div style={{ color: '#e53e3e', fontSize: '12px', marginBottom: '10px', marginLeft: '72px' }}>
+            <div style={{ color: '#e53e3e', fontSize: '10px', marginBottom: '6px', marginLeft: '56px' }}>
               {errors.password || errors.confirmPassword}
             </div>
           )}
 
           {/* 이름 필드 */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px', flexWrap: 'nowrap' }}>
-            <label style={{ fontWeight: '600', color: '#d1d5db', fontSize: '14px', minWidth: '80px', flexShrink: 0, textAlign: 'left' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px', flexWrap: 'nowrap' }}>
+            <label style={{ fontWeight: '600', color: '#d1d5db', fontSize: '12px', minWidth: '70px', flexShrink: 0, textAlign: 'left' }}>
               이름 *
             </label>
             <input
@@ -820,30 +889,45 @@ const NewSignupModal: React.FC<NewSignupModalProps> = ({ isOpen, onClose, onSucc
               name="name"
               value={formData.name}
               onChange={handleInputChange}
-              placeholder="이름을 입력하세요"
+              placeholder="이름 입력"
               style={{
-                flex: 1,
-                padding: '10px 12px',
+                width: '170px',
+                padding: '8px 8px',
                 border: errors.name ? '2px solid #e53e3e' : '2px solid rgba(209, 213, 219, 0.3)',
                 borderRadius: '6px',
-                fontSize: '14px',
+                fontSize: '12px',
                 backgroundColor: 'rgba(255, 255, 255, 0.1)',
                 color: '#d1d5db',
-                height: '42px',
+                height: '36px',
                 boxSizing: 'border-box',
-                minWidth: 0
+                flexShrink: 0
               }}
             />
+            <button 
+              type="button" 
+              style={{
+                ...getButtonStyle('default', formData.name.trim() !== ''),
+                fontSize: '10px',
+                padding: '6px 8px',
+                minWidth: '60px',
+                width: 'auto',
+                height: '36px',
+                whiteSpace: 'nowrap'
+              }}
+              disabled
+            >
+              {formData.name.trim() ? '✓ 확인됨' : '중복확인'}
+            </button>
           </div>
           {errors.name && (
-            <div style={{ color: '#e53e3e', fontSize: '12px', marginBottom: '10px', marginLeft: '72px' }}>
+            <div style={{ color: '#e53e3e', fontSize: '10px', marginBottom: '8px', marginLeft: '56px' }}>
               {errors.name}
             </div>
           )}
           
           {/* 닉네임 필드 */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px', flexWrap: 'nowrap' }}>
-            <label style={{ fontWeight: '600', color: '#d1d5db', fontSize: '14px', minWidth: '80px', flexShrink: 0, textAlign: 'left' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px', flexWrap: 'nowrap' }}>
+            <label style={{ fontWeight: '600', color: '#d1d5db', fontSize: '12px', minWidth: '70px', flexShrink: 0, textAlign: 'left' }}>
               닉네임 *
             </label>
             <input
@@ -851,30 +935,45 @@ const NewSignupModal: React.FC<NewSignupModalProps> = ({ isOpen, onClose, onSucc
               name="nickname"
               value={formData.nickname}
               onChange={handleInputChange}
-              placeholder="닉네임을 입력하세요"
+              placeholder="닉네임 입력"
               style={{
-                flex: 1,
-                padding: '10px 12px',
+                width: '170px',
+                padding: '8px 8px',
                 border: errors.nickname ? '2px solid #e53e3e' : '2px solid rgba(209, 213, 219, 0.3)',
                 borderRadius: '6px',
-                fontSize: '14px',
+                fontSize: '12px',
                 backgroundColor: 'rgba(255, 255, 255, 0.1)',
                 color: '#d1d5db',
-                height: '42px',
+                height: '36px',
                 boxSizing: 'border-box',
-                minWidth: 0
+                flexShrink: 0
               }}
             />
+            <button 
+              type="button" 
+              style={{
+                ...getButtonStyle('default', formData.nickname.trim() !== ''),
+                fontSize: '10px',
+                padding: '6px 8px',
+                minWidth: '60px',
+                width: 'auto',
+                height: '36px',
+                whiteSpace: 'nowrap'
+              }}
+              disabled
+            >
+              {formData.nickname.trim() ? '✓ 확인됨' : '중복확인'}
+            </button>
           </div>
           {errors.nickname && (
-            <div style={{ color: '#e53e3e', fontSize: '12px', marginBottom: '10px', marginLeft: '72px' }}>
+            <div style={{ color: '#e53e3e', fontSize: '10px', marginBottom: '8px', marginLeft: '56px' }}>
               {errors.nickname}
             </div>
           )}
 
           {/* 휴대폰 필드 */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px', flexWrap: 'nowrap' }}>
-            <label style={{ fontWeight: '600', color: '#d1d5db', fontSize: '14px', minWidth: '80px', flexShrink: 0, textAlign: 'left' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px', flexWrap: 'nowrap' }}>
+            <label style={{ fontWeight: '600', color: '#d1d5db', fontSize: '12px', minWidth: '70px', flexShrink: 0, textAlign: 'left' }}>
               휴대폰 *
             </label>
             <input
@@ -882,29 +981,24 @@ const NewSignupModal: React.FC<NewSignupModalProps> = ({ isOpen, onClose, onSucc
               name="phone"
               value={formData.phone}
               onChange={handleInputChange}
-              placeholder="010-0000-0000 형식으로 입력해 주세요"
+              placeholder="휴대폰 번호를 010-0000-0000 형식으로 입력"
               style={{
-                flex: 1,
-                padding: '10px 12px',
+                width: '170px',
+                padding: '8px 8px',
                 border: errors.phone ? '2px solid #e53e3e' : '2px solid rgba(209, 213, 219, 0.3)',
                 borderRadius: '6px',
-                fontSize: '14px',
+                fontSize: '12px',
                 backgroundColor: 'rgba(255, 255, 255, 0.1)',
                 color: '#d1d5db',
-                height: '42px',
+                height: '36px',
                 boxSizing: 'border-box',
-                minWidth: 0
+                flexShrink: 0
               }}
             />
             <button 
               type="button" 
               style={{
                 ...getButtonStyle('default', isPhoneVerified),
-                fontSize: '12px',
-                padding: '10px 12px',
-                minWidth: '80px',
-                width: '80px',
-                height: '42px'
               }}
               onClick={handlePhoneAuth}
             >
@@ -914,8 +1008,8 @@ const NewSignupModal: React.FC<NewSignupModalProps> = ({ isOpen, onClose, onSucc
           {errors.phone && <div style={{ color: '#e53e3e', fontSize: '12px', marginBottom: '10px', marginLeft: '72px' }}>{errors.phone}</div>}
 
           {/* 이메일 필드 */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px', flexWrap: 'nowrap' }}>
-            <label style={{ fontWeight: '600', color: '#d1d5db', fontSize: '14px', minWidth: '80px', flexShrink: 0, textAlign: 'left' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px', flexWrap: 'nowrap' }}>
+            <label style={{ fontWeight: '600', color: '#d1d5db', fontSize: '12px', minWidth: '70px', flexShrink: 0, textAlign: 'left' }}>
               Email *
             </label>
             <input
@@ -923,29 +1017,24 @@ const NewSignupModal: React.FC<NewSignupModalProps> = ({ isOpen, onClose, onSucc
               name="email"
               value={formData.email}
               onChange={handleInputChange}
-              placeholder="a@a.com"
+              placeholder="Email: aaa@aaa.com"
               style={{
-                flex: 1,
-                padding: '10px 12px',
+                width: '170px',
+                padding: '8px 8px',
                 border: errors.email ? '2px solid #e53e3e' : '2px solid rgba(209, 213, 219, 0.3)',
                 borderRadius: '6px',
-                fontSize: '14px',
+                fontSize: '12px',
                 backgroundColor: 'rgba(255, 255, 255, 0.1)',
                 color: '#d1d5db',
-                height: '42px',
+                height: '36px',
                 boxSizing: 'border-box',
-                minWidth: 0
+                flexShrink: 0
               }}
             />
             <button 
               type="button" 
               style={{
                 ...getButtonStyle('default', isEmailChecked),
-                fontSize: '12px',
-                padding: '10px 12px',
-                minWidth: '80px',
-                width: '80px',
-                height: '42px'
               }}
               onClick={handleEmailCheck}
               disabled={loading}
@@ -956,8 +1045,8 @@ const NewSignupModal: React.FC<NewSignupModalProps> = ({ isOpen, onClose, onSucc
           {errors.email && <div style={{ color: '#e53e3e', fontSize: '12px', marginBottom: '10px', marginLeft: '72px' }}>{errors.email}</div>}
 
           {/* 주소 필드 */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px', flexWrap: 'nowrap' }}>
-            <label style={{ fontWeight: '600', color: '#d1d5db', fontSize: '14px', minWidth: '80px', flexShrink: 0, textAlign: 'left' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px', flexWrap: 'nowrap' }}>
+            <label style={{ fontWeight: '600', color: '#d1d5db', fontSize: '12px', minWidth: '70px', flexShrink: 0, textAlign: 'left' }}>
               주소 *
             </label>
             <input
@@ -965,29 +1054,24 @@ const NewSignupModal: React.FC<NewSignupModalProps> = ({ isOpen, onClose, onSucc
               name="address"
               value={formData.address}
               onChange={handleInputChange}
-              placeholder="주소를 입력하세요"
+              placeholder="주소: 서명신청시 배송지: 필요"
               style={{
-                flex: 1,
-                padding: '10px 12px',
+                width: '170px',
+                padding: '8px 8px',
                 border: errors.address ? '2px solid #e53e3e' : '2px solid rgba(209, 213, 219, 0.3)',
                 borderRadius: '6px',
-                fontSize: '14px',
+                fontSize: '12px',
                 backgroundColor: 'rgba(255, 255, 255, 0.1)',
                 color: '#d1d5db',
-                height: '42px',
+                height: '36px',
                 boxSizing: 'border-box',
-                minWidth: 0
+                flexShrink: 0
               }}
             />
             <button 
               type="button" 
               style={{
                 ...getAddressButtonStyle(isAddressConfirmed),
-                fontSize: '12px',
-                padding: '10px 12px',
-                minWidth: '80px',
-                width: '80px',
-                height: '42px'
               }}
               onClick={handleAddressSearch}
             >
@@ -997,8 +1081,8 @@ const NewSignupModal: React.FC<NewSignupModalProps> = ({ isOpen, onClose, onSucc
           {errors.address && <div style={{ color: '#e53e3e', fontSize: '12px', marginBottom: '10px', marginLeft: '72px' }}>{errors.address}</div>}
 
           {/* 블로그 필드 */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px', flexWrap: 'nowrap' }}>
-            <label style={{ fontWeight: '600', color: '#d1d5db', fontSize: '14px', minWidth: '80px', flexShrink: 0, textAlign: 'left' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px', flexWrap: 'nowrap' }}>
+            <label style={{ fontWeight: '600', color: '#d1d5db', fontSize: '12px', minWidth: '70px', flexShrink: 0, textAlign: 'left' }}>
               블로그
             </label>
             <input
@@ -1006,18 +1090,18 @@ const NewSignupModal: React.FC<NewSignupModalProps> = ({ isOpen, onClose, onSucc
               name="blog"
               value={formData.blog}
               onChange={handleInputChange}
-              placeholder="https://도 포함하여 입력후 우측 아이콘을 눌러 확인해 주세요"
+              placeholder="블로그 https://포함 입력 후 우측 아이콘 눌러 확인"
               style={{
-                flex: 1,
-                padding: '10px 12px',
+                width: '170px',
+                padding: '8px 8px',
                 border: '2px solid rgba(209, 213, 219, 0.3)',
                 borderRadius: '6px',
-                fontSize: '14px',
+                fontSize: '12px',
                 backgroundColor: 'rgba(255, 255, 255, 0.1)',
                 color: '#d1d5db',
-                height: '42px',
+                height: '36px',
                 boxSizing: 'border-box',
-                minWidth: 0
+                flexShrink: 0
               }}
             />
             <button 
@@ -1028,13 +1112,13 @@ const NewSignupModal: React.FC<NewSignupModalProps> = ({ isOpen, onClose, onSucc
                 backgroundColor: urlValidation.blog.isValid ? '#3b82f6' : 'transparent',
                 color: urlValidation.blog.isValid ? 'white' : '#d1d5db',
                 border: urlValidation.blog.isValid ? '2px solid #3b82f6' : '2px solid rgba(209, 213, 219, 0.3)',
-                padding: '10px 12px',
+                padding: '8px',
                 borderRadius: '6px',
-                fontSize: '18px',
+                fontSize: '16px',
                 cursor: urlValidation.blog.isChecking ? 'wait' : 'pointer',
-                minWidth: '40px',
-                width: '40px',
-                height: '42px',
+                minWidth: '60px',
+                width: '60px',
+                height: '36px',
                 boxSizing: 'border-box',
                 display: 'flex',
                 alignItems: 'center',
@@ -1047,8 +1131,8 @@ const NewSignupModal: React.FC<NewSignupModalProps> = ({ isOpen, onClose, onSucc
           </div>
 
           {/* 인스타그램 필드 */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px', flexWrap: 'nowrap' }}>
-            <label style={{ fontWeight: '600', color: '#d1d5db', fontSize: '14px', minWidth: '80px', flexShrink: 0, textAlign: 'left' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '12px', flexWrap: 'nowrap' }}>
+            <label style={{ fontWeight: '600', color: '#d1d5db', fontSize: '12px', minWidth: '70px', flexShrink: 0, textAlign: 'left' }}>
               인스타그램
             </label>
             <input
@@ -1056,18 +1140,18 @@ const NewSignupModal: React.FC<NewSignupModalProps> = ({ isOpen, onClose, onSucc
               name="instagram"
               value={formData.instagram}
               onChange={handleInputChange}
-              placeholder="@인스타아이디 입력후 우측 아이콘을 눌러 확인해 주세요"
+              placeholder="인스타그램: @인스타그램 ID 입력후 아이콘 확인"
               style={{
-                flex: 1,
-                padding: '10px 12px',
+                width: '170px',
+                padding: '8px 8px',
                 border: '2px solid rgba(209, 213, 219, 0.3)',
                 borderRadius: '6px',
-                fontSize: '14px',
+                fontSize: '12px',
                 backgroundColor: 'rgba(255, 255, 255, 0.1)',
                 color: '#d1d5db',
-                height: '42px',
+                height: '36px',
                 boxSizing: 'border-box',
-                minWidth: 0
+                flexShrink: 0
               }}
             />
             <button 
@@ -1078,13 +1162,13 @@ const NewSignupModal: React.FC<NewSignupModalProps> = ({ isOpen, onClose, onSucc
                 backgroundColor: urlValidation.instagram.isValid ? '#3b82f6' : 'transparent',
                 color: urlValidation.instagram.isValid ? 'white' : '#d1d5db',
                 border: urlValidation.instagram.isValid ? '2px solid #3b82f6' : '2px solid rgba(209, 213, 219, 0.3)',
-                padding: '10px 12px',
+                padding: '8px',
                 borderRadius: '6px',
-                fontSize: '18px',
+                fontSize: '16px',
                 cursor: urlValidation.instagram.isChecking ? 'wait' : 'pointer',
-                minWidth: '40px',
-                width: '40px',
-                height: '42px',
+                minWidth: '60px',
+                width: '60px',
+                height: '36px',
                 boxSizing: 'border-box',
                 display: 'flex',
                 alignItems: 'center',
@@ -1099,31 +1183,31 @@ const NewSignupModal: React.FC<NewSignupModalProps> = ({ isOpen, onClose, onSucc
           {/* 버튼 그룹 */}
           <div style={{
             display: 'flex',
-            gap: '8px',
+            gap: '6px',
             justifyContent: 'center',
-            marginTop: '16px',
-            paddingTop: '16px',
+            marginTop: '12px',
+            paddingTop: '12px',
             borderTop: '1px solid rgba(209, 213, 219, 0.3)',
             flexWrap: 'nowrap'
           }}>
             <button 
               type="button" 
               style={{
-                flex: 1,
-                padding: '0 12px',
+                width: '80px',
+                padding: '0 8px',
                 background: 'transparent',
                 color: '#d1d5db',
                 border: '2px solid rgba(209, 213, 219, 0.3)',
                 borderRadius: '8px',
-                fontSize: '15px',
+                fontSize: '13px',
                 fontWeight: '600',
                 cursor: 'pointer',
                 transition: 'all 0.2s',
-                height: '40px',
+                height: '36px',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                minWidth: 0
+                flexShrink: 0
               }}
               onClick={resetForm} 
               disabled={loading}
@@ -1133,21 +1217,21 @@ const NewSignupModal: React.FC<NewSignupModalProps> = ({ isOpen, onClose, onSucc
             <button 
               type="button" 
               style={{
-                flex: 1,
-                padding: '0 12px',
+                width: '80px',
+                padding: '0 8px',
                 background: 'transparent',
                 color: '#d1d5db',
                 border: '2px solid rgba(209, 213, 219, 0.3)',
                 borderRadius: '8px',
-                fontSize: '15px',
+                fontSize: '13px',
                 fontWeight: '600',
                 cursor: 'pointer',
                 transition: 'all 0.2s',
-                height: '40px',
+                height: '36px',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                minWidth: 0
+                flexShrink: 0
               }}
               onClick={onClose} 
               disabled={loading}
@@ -1158,15 +1242,12 @@ const NewSignupModal: React.FC<NewSignupModalProps> = ({ isOpen, onClose, onSucc
               type="submit" 
               style={{ 
                 ...getSignupButtonStyle(), 
-                flex: 1,
-                fontSize: '15px',
-                height: '40px',
-                padding: '0 12px',
-                minWidth: 0
+                width: '80px',
+                flexShrink: 0
               }}
               disabled={loading}
             >
-              {loading ? '가입 중...' : (isAdmin ? '회원 추가' : '회원 등록')}
+              {loading ? '가입 중...' : '회원 등록'}
             </button>
           </div>
         </form>
@@ -1175,4 +1256,5 @@ const NewSignupModal: React.FC<NewSignupModalProps> = ({ isOpen, onClose, onSucc
   );
 };
 
-export default NewSignupModal;
+export default MobileSignupModal;
+

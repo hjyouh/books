@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react'
 import './ColorPaletteMenu.css'
+import colorPaletteIcon from '../assets/icons/color-palette.png'
 
 interface ColorPaletteMenuProps {
   currentColor: string
@@ -38,9 +39,10 @@ const ColorPaletteMenu: React.FC<ColorPaletteMenuProps> = ({ currentColor, onCol
     <div className="color-palette-wrapper" ref={menuRef}>
       <div 
         className="color-palette-trigger"
-        style={{ backgroundColor: currentColor }}
         onClick={() => setIsOpen(!isOpen)}
-      />
+      >
+        <img src={colorPaletteIcon} alt="색상 선택" style={{ width: '32px', height: '32px' }} />
+      </div>
       {isOpen && (
         <div className="color-palette-menu">
           <div className="color-palette-grid">

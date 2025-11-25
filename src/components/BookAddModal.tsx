@@ -109,13 +109,25 @@ const BookAddModal: React.FC<BookAddModalProps> = ({ isOpen, onClose, onSuccess,
     }
   }, [formData, initialData, isEditMode])
 
+  // 모달이 열릴 때만 에디터 내용 초기화 (사용자 입력 중에는 업데이트하지 않음)
+  const isInitializingRef = React.useRef(false)
+  
   useEffect(() => {
-    if (isOpen && editorRef.current) {
-      // 모달이 열릴 때 에디터 내용 설정
-      const description = isEditMode && editBook ? (editBook.description || '') : (formData.description || '')
-      editorRef.current.innerHTML = description
+    if (isOpen && editorRef.current && !isInitializingRef.current) {
+      isInitializingRef.current = true
+      const description = isEditMode && editBook ? (editBook.description || '') : ''
+      
+      // 모달이 처음 열릴 때만 내용 설정
+      if (description !== editorRef.current.innerHTML) {
+        editorRef.current.innerHTML = description
+      }
+      
+      // 다음 프레임에서 플래그 리셋
+      requestAnimationFrame(() => {
+        isInitializingRef.current = false
+      })
     }
-  }, [isOpen, editBook, isEditMode, formData.description])
+  }, [isOpen, editBook?.id, isEditMode]) // formData.description 제거하여 사용자 입력 중 업데이트 방지
 
   useEffect(() => {
     if (formData.postingStart && formData.postingEnd) {
@@ -343,7 +355,17 @@ const BookAddModal: React.FC<BookAddModalProps> = ({ isOpen, onClose, onSuccess,
 
   const handleEditorInput = () => {
     if (!editorRef.current) return
+    
+    // 현재 커서 위치 저장
+    const selection = window.getSelection()
+    let savedRange: Range | null = null
+    if (selection && selection.rangeCount > 0) {
+      savedRange = selection.getRangeAt(0).cloneRange()
+    }
+    
     const html = editorRef.current.innerHTML
+    
+    // 상태 업데이트 (비동기)
     setFormData(prev => {
       if (prev.description === html) return prev
       return {
@@ -351,6 +373,23 @@ const BookAddModal: React.FC<BookAddModalProps> = ({ isOpen, onClose, onSuccess,
         description: html
       }
     })
+    
+    // 다음 프레임에서 커서 위치 복원
+    if (savedRange && editorRef.current) {
+      requestAnimationFrame(() => {
+        if (editorRef.current && savedRange) {
+          try {
+            const newSelection = window.getSelection()
+            if (newSelection) {
+              newSelection.removeAllRanges()
+              newSelection.addRange(savedRange)
+            }
+          } catch (error) {
+            // 커서 복원 실패 시 무시
+          }
+        }
+      })
+    }
   }
 
   const execEditorCommand = (command: string, value?: string) => {
@@ -729,8 +768,9 @@ const BookAddModal: React.FC<BookAddModalProps> = ({ isOpen, onClose, onSuccess,
               {dateError && <p className="posting-error">{dateError}</p>}
 
               <div className={`form-row description-row ${isEditorFullscreen ? 'fullscreen' : ''}`}>
-                <div className="description-label-wrapper">
-                  <label htmlFor="description">도서 설명</label>
+                <div className="description-header-row">
+                  <label htmlFor="description" className="description-label">도서 설명</label>
+                  <div style={{ flex: 1 }}></div>
                   <button
                     type="button"
                     className={`editor-expand-trigger ${isEditorFullscreen ? 'active' : ''}`}

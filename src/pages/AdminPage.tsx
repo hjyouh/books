@@ -10,7 +10,19 @@ import BookEditModal from '../components/BookEditModal'
 import SlideAddModal from '../components/SlideAddModal'
 import { categoryColors, statCardColors } from '../utils/pastelColors'
 import { runSlidesUpdate } from '../utils/updateSlidesDatabase'
+import { runBooksUpdate } from '../utils/updateBooksDatabase'
+import { runMembersUpdate } from '../utils/updateMembersDatabase'
+import { runReviewsUpdate } from '../utils/updateReviewsDatabase'
 import './AdminPage.css'
+// 아이콘 이미지 import
+import editIcon from '../assets/icons/edit.png'
+import leftArrowIcon from '../assets/icons/left (1).png'
+import rightArrowIcon from '../assets/icons/Right (1).png'
+import trashIcon from '../assets/icons/Trash.png'
+import addImageIcon from '../assets/icons/add image 64.png'
+import dbUpdateIcon from '../assets/icons/DB update 64.png'
+import onButtonIcon from '../assets/icons/on-button 64.png'
+import offButtonIcon from '../assets/icons/off-button 64.png'
 
 type MenuItem = 'home' | 'main-slide' | 'books' | 'ad-management' | 'member-management' | 'review-management'
 
@@ -196,14 +208,22 @@ const AdminPage: React.FC = () => {
     try {
       setLoading(true)
       const slidesRef = collection(db, 'slides')
+      // 최신 데이터를 가져오기 위해 캐시 없이 가져오기
       const q = query(slidesRef, orderBy('order', 'asc'))
       const querySnapshot = await getDocs(q)
       
-      const slidesData = querySnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      })) as SlideData[]
+      console.log('fetchSlides - 가져온 슬라이드 수:', querySnapshot.docs.length)
+      const slidesData = querySnapshot.docs.map(doc => {
+        const data = doc.data()
+        console.log(`슬라이드 ${doc.id} - isActive: ${data.isActive}, updatedAt: ${data.updatedAt}`)
+        return {
+          id: doc.id,
+          ...data
+        }
+      }) as SlideData[]
 
+      // 1. isActive 필드로 먼저 분리
+      // 2. 포스팅 기간을 체크하여 자동으로 표시 영역 결정
       const nowMs = Date.now()
       const toMs = (value: any): number | null => {
         if (!value) return null
@@ -227,32 +247,129 @@ const AdminPage: React.FC = () => {
         return null
       }
 
+      // fetchSlides에서는 데이터베이스의 현재 상태를 그대로 사용
+      // OFF 슬라이드는 절대 자동 활성화하지 않음 (가장 중요!)
+      // ON 슬라이드만 포스팅 기간 체크하여 자동 OFF 변경 가능
       const updatePromises: Promise<void>[] = []
-      const normalizedSlides = slidesData.map(slide => {
+      
+      // 먼저 OFF 슬라이드와 ON 슬라이드를 분리
+      // 중요: 데이터베이스에서 가져온 상태를 그대로 사용
+      const offSlides = slidesData.filter(slide => {
+        const isOff = slide.isActive === false
+        if (!isOff) {
+          console.log(`[fetchSlides] 경고: 슬라이드 ${slide.id}가 ON 상태로 가져와졌습니다 (isActive=${slide.isActive})`)
+        }
+        return isOff
+      })
+      const onSlides = slidesData.filter(slide => slide.isActive === true)
+      
+      console.log(`[fetchSlides] 시작 - OFF 슬라이드 ${offSlides.length}개, ON 슬라이드 ${onSlides.length}개`)
+      console.log(`[fetchSlides] OFF 슬라이드 ID들:`, offSlides.map(s => s.id))
+      console.log(`[fetchSlides] ON 슬라이드 ID들:`, onSlides.map(s => s.id))
+      
+      // 데이터베이스에서 모든 슬라이드가 ON으로 가져와졌는지 확인
+      if (offSlides.length === 0 && slidesData.length > 0) {
+        console.warn(`[fetchSlides] 경고: 데이터베이스에서 OFF 슬라이드가 없습니다! 모든 슬라이드가 ON 상태입니다.`)
+      }
+      
+      // OFF 슬라이드는 절대 변경하지 않음 (포스팅 기간 체크 로직을 완전히 건너뜀)
+      // 중요: OFF 슬라이드는 포스팅 기간을 체크하지 않고 절대 자동 활성화하지 않음
+      // 데이터베이스에서 가져온 상태를 그대로 사용 (절대 변경하지 않음)
+      const normalizedOffSlides = offSlides.map(slide => {
+        console.log(`[fetchSlides] OFF 슬라이드 ${slide.id}는 포스팅 기간 체크 로직을 건너뜀 (절대 변경 안함, isActive=${slide.isActive})`)
+        // OFF 슬라이드는 절대 변경하지 않으므로 원본 그대로 반환
+        return { ...slide, isActive: false } // 명시적으로 false로 설정
+      })
+      
+      // ON 슬라이드만 포스팅 기간 체크 (OFF 슬라이드는 이 로직을 거치지 않음)
+      const normalizedOnSlides = onSlides.map(slide => {
         const endMs = toMs(slide.postingEnd)
-        const shouldBeActive = endMs === null || endMs >= nowMs
+        const startMs = toMs(slide.postingStart)
+        const updatedAtMs = slide.updatedAt ? toMs(slide.updatedAt) : null
+        const isRecentlyUpdated = updatedAtMs && (nowMs - updatedAtMs < 30000) // 30초 이내 업데이트된 경우
 
-        if (typeof slide.isActive === 'boolean' && slide.isActive !== shouldBeActive) {
+        // 최근 30초 이내에 업데이트된 경우는 사용자가 수동으로 설정한 것으로 간주하고 자동 업데이트하지 않음
+        if (isRecentlyUpdated) {
+          console.log(`[fetchSlides] ON 슬라이드 ${slide.id}는 최근 업데이트되어 변경하지 않음`)
+          return slide
+        }
+
+        // ON 상태인 슬라이드만 포스팅 기간 체크
+        // 포스팅 기간이 지나면 자동으로 OFF로 변경
+        let shouldBeActive = true // ON 상태인 슬라이드는 기본적으로 활성화 상태
+        
+        if (startMs !== null && endMs !== null) {
+          // 시작일과 종료일이 모두 있는 경우
+          const isWithinPeriod = nowMs >= startMs && nowMs <= endMs
+          shouldBeActive = isWithinPeriod
+        } else if (endMs !== null) {
+          // 종료일만 있는 경우
+          shouldBeActive = endMs >= nowMs
+        } else if (startMs !== null) {
+          // 시작일만 있는 경우
+          shouldBeActive = startMs <= nowMs
+        }
+        // 기간이 없는 경우는 현재 ON 상태 유지 (shouldBeActive = true)
+
+        // ON 상태인 슬라이드가 포스팅 기간이 지나면 OFF로 변경
+        if (slide.isActive === true && shouldBeActive === false) {
+          console.log(`[fetchSlides] ON 슬라이드 ${slide.id} 포스팅 기간 만료로 자동 OFF 변경`)
           updatePromises.push(
             updateDoc(doc(db, 'slides', slide.id), {
-              isActive: shouldBeActive,
+              isActive: false,
               updatedAt: Timestamp.now()
             }).catch(error => console.error('슬라이드 상태 자동 업데이트 오류:', error))
           )
           return {
             ...slide,
-            isActive: shouldBeActive
+            isActive: false
           }
         }
 
         return slide
       })
+      
+      // OFF 슬라이드와 ON 슬라이드를 합침
+      // OFF 슬라이드는 포스팅 기간 체크 로직을 완전히 건너뛰었으므로 절대 변경되지 않음
+      const normalizedSlides = [...normalizedOffSlides, ...normalizedOnSlides]
+      
+      // 최종 확인: OFF 슬라이드가 여전히 OFF 상태인지 확인
+      const finalOffSlides = normalizedSlides.filter(s => s.isActive === false)
+      const finalOnSlides = normalizedSlides.filter(s => s.isActive === true)
+      console.log(`[fetchSlides] 최종 - OFF 슬라이드 ${finalOffSlides.length}개, ON 슬라이드 ${finalOnSlides.length}개`)
+      console.log(`[fetchSlides] 최종 OFF 슬라이드 ID들:`, finalOffSlides.map(s => s.id))
+      
+      // 안전장치: OFF 슬라이드가 실수로 ON으로 변경되지 않았는지 확인
+      const offSlidesIds = new Set(offSlides.map(s => s.id))
+      const finalNormalizedSlides = normalizedSlides.map(slide => {
+        // 원래 OFF였던 슬라이드가 ON으로 변경되었는지 확인
+        if (offSlidesIds.has(slide.id) && slide.isActive === true) {
+          console.error(`[fetchSlides] 경고: OFF 슬라이드 ${slide.id}가 ON으로 변경되었습니다! 강제로 OFF로 복원합니다.`)
+          return { ...slide, isActive: false }
+        }
+        return slide
+      })
+      
+      // 최종 확인: OFF 슬라이드가 여전히 OFF 상태인지 확인
+      const finalOffSlidesAfterCheck = finalNormalizedSlides.filter(s => s.isActive === false)
+      const finalOnSlidesAfterCheck = finalNormalizedSlides.filter(s => s.isActive === true)
+      console.log(`[fetchSlides] 안전장치 후 - OFF 슬라이드 ${finalOffSlidesAfterCheck.length}개, ON 슬라이드 ${finalOnSlidesAfterCheck.length}개`)
 
       if (updatePromises.length > 0) {
         await Promise.all(updatePromises)
       }
       
-      setSlides(normalizedSlides)
+      console.log('fetchSlides - normalizedSlides:', finalNormalizedSlides.map(s => ({ 
+        id: s.id, 
+        isActive: s.isActive, 
+        slideType: s.slideType, 
+        postingEnd: s.postingEnd,
+        updatedAt: s.updatedAt 
+      })))
+      console.log('fetchSlides - 활성 슬라이드:', finalNormalizedSlides.filter(s => s.isActive).map(s => ({ id: s.id, isActive: s.isActive })))
+      console.log('fetchSlides - 비활성 슬라이드:', finalNormalizedSlides.filter(s => !s.isActive).map(s => ({ id: s.id, isActive: s.isActive })))
+      
+      setSlides(finalNormalizedSlides)
     } catch (error) {
       console.error('슬라이드 데이터 가져오기 오류:', error)
     } finally {
@@ -264,6 +381,44 @@ const AdminPage: React.FC = () => {
   const fetchReviewApplications = async () => {
     try {
       setLoading(true)
+      
+      // 회원 데이터를 먼저 가져와서 맵으로 저장 (빠른 조회를 위해)
+      const usersRef = collection(db, 'users')
+      const usersQuerySnapshot = await getDocs(usersRef)
+      const membersMapByUid = new Map<string, MemberData>() // Firebase 문서 ID로 조회
+      const membersMapById = new Map<string, MemberData>() // 회원 ID 필드로 조회
+      usersQuerySnapshot.docs.forEach(doc => {
+        const data = doc.data()
+        const memberData: MemberData = {
+          uid: doc.id,
+          id: data.id || '',
+          name: data.name || '',
+          nickname: data.nickname || '',
+          phone: data.phone || '',
+          email: data.email || '',
+          address: data.address || '',
+          blog: data.blog || '',
+          instagram: data.instagram || '',
+          isAdmin: data.isAdmin || false,
+          level: data.level || 'customer',
+          createdAt: data.createdAt
+        }
+        // Firebase 문서 ID로 맵에 추가
+        membersMapByUid.set(doc.id, memberData)
+        // 회원 ID 필드로도 맵에 추가 (id가 있을 경우만)
+        if (memberData.id && memberData.id.trim() !== '') {
+          membersMapById.set(memberData.id, memberData)
+        }
+        console.log('회원 맵에 추가:', {
+          uid: doc.id,
+          id: memberData.id,
+          name: memberData.name,
+          nickname: memberData.nickname
+        })
+      })
+      console.log('전체 회원 맵 크기 (UID):', membersMapByUid.size)
+      console.log('전체 회원 맵 크기 (ID):', membersMapById.size)
+      
       const applicationsRef = collection(db, 'reviewApplications')
       const q = query(applicationsRef, orderBy('신청일', 'desc'))
       const querySnapshot = await getDocs(q)
@@ -273,26 +428,85 @@ const AdminPage: React.FC = () => {
       for (const docSnap of querySnapshot.docs) {
         const data = docSnap.data()
         
+        // 서평 데이터의 모든 필드 확인 (디버깅용)
+        console.log('서평 신청 데이터 필드:', {
+          서평ID: docSnap.id,
+          모든키: Object.keys(data),
+          블로그링크: data.블로그링크,
+          인스타링크: data.인스타링크,
+          blogLink: data.blogLink,
+          instagramLink: data.instagramLink,
+          reviewBlog: data.reviewBlog,
+          reviewInstagram: data.reviewInstagram,
+          처리상태: data.처리상태
+        })
+        
         // 회원 정보 가져오기
         let memberInfo: Partial<MemberData> = {}
         try {
-          // 회원ID가 users 컬렉션의 문서 ID이므로 직접 가져오기
-          const memberDocRef = doc(db, 'users', data.회원ID)
-          const memberDocSnap = await getDoc(memberDocRef)
+          // 먼저 Firebase 문서 ID로 찾고, 없으면 회원 ID 필드로 찾습니다
+          let memberFromMap = membersMapByUid.get(data.회원ID || '')
           
-          if (memberDocSnap.exists()) {
-            const memberData = memberDocSnap.data()
+          if (!memberFromMap && data.회원ID) {
+            // Firebase 문서 ID로 찾지 못했으면 회원 ID 필드로 찾기
+            memberFromMap = membersMapById.get(data.회원ID)
+          }
+          
+          console.log('서평 신청 데이터:', {
+            서평ID: docSnap.id,
+            회원ID: data.회원ID,
+            회원ID타입: typeof data.회원ID,
+            UID맵에있는지: membersMapByUid.has(data.회원ID || ''),
+            ID맵에있는지: membersMapById.has(data.회원ID || ''),
+            찾은회원: memberFromMap ? '있음' : '없음'
+          })
+          
+          if (memberFromMap) {
+            // 맵에서 회원 정보를 가져옵니다
             memberInfo = {
-              id: memberData.id || data.회원ID,
-              name: memberData.name || data.applicantName || '',
-              nickname: memberData.nickname || '',
-              phone: memberData.phone || data.applicantPhone || '',
-              blog: memberData.blog || '',
-              instagram: memberData.instagram || ''
+              id: memberFromMap.id || '',
+              name: memberFromMap.name || data.applicantName || '',
+              nickname: memberFromMap.nickname || '',
+              phone: memberFromMap.phone || data.applicantPhone || '',
+              blog: memberFromMap.blog || '',
+              instagram: memberFromMap.instagram || ''
             }
+            console.log('맵에서 회원 정보 가져옴:', {
+              찾은회원ID: data.회원ID,
+              회원ID필드: memberFromMap.id,
+              이름: memberFromMap.name,
+              닉네임: memberFromMap.nickname,
+              uid: memberFromMap.uid,
+              설정된memberInfo: memberInfo
+            })
+          } else {
+            // 맵에 없으면 빈 정보 사용
+            memberInfo = {
+              id: '',
+              name: data.applicantName || '',
+              nickname: '',
+              phone: data.applicantPhone || '',
+              blog: '',
+              instagram: ''
+            }
+            console.log('회원 정보를 찾을 수 없음:', {
+              찾는회원ID: data.회원ID,
+              UID맵의모든키: Array.from(membersMapByUid.keys()).slice(0, 5),
+              ID맵의모든키: Array.from(membersMapById.keys()).slice(0, 5),
+              applicantName: data.applicantName
+            })
           }
         } catch (error) {
           console.error('회원 정보 가져오기 오류:', error)
+          // 에러 발생 시에도 Firebase ID를 표시하지 않음
+          memberInfo = {
+            id: '',
+            name: data.applicantName || '',
+            nickname: '',
+            phone: data.applicantPhone || '',
+            blog: '',
+            instagram: ''
+          }
         }
         
         applicationsData.push({
@@ -312,8 +526,8 @@ const AdminPage: React.FC = () => {
           applicantAddress: data.applicantAddress || '',
           applicantId: memberInfo.id || '',
           applicantNickname: memberInfo.nickname || '',
-          applicantBlog: memberInfo.blog || '',
-          applicantInstagram: memberInfo.instagram || '',
+          applicantBlog: data.블로그링크 || data.blogLink || data.reviewBlog || '', // 서평 작성 시 입력한 블로그 링크
+          applicantInstagram: data.인스타링크 || data.instagramLink || data.reviewInstagram || '', // 서평 작성 시 입력한 인스타 링크
           서평갯수: data.서평갯수 || 0,
           createdAt: data.createdAt,
           updatedAt: data.updatedAt
@@ -412,7 +626,8 @@ const AdminPage: React.FC = () => {
       return
     }
 
-    const confirmed = window.confirm(`정말 ${member.name || member.id || '이 회원'}을 삭제하시겠습니까?`)
+    const memberName = member.name || member.id || '이 회원'
+    const confirmed = window.confirm(`정말 "${memberName}" 회원을 삭제하시겠습니까?\n\n삭제된 데이터는 복구할 수 없습니다.`)
     if (!confirmed) {
       return
     }
@@ -513,28 +728,103 @@ const AdminPage: React.FC = () => {
   // 슬라이드 관련 함수들
   const handleSlideToggle = async (slideId: string, activate: boolean, slideType?: 'main' | 'ad') => {
     try {
+      console.log('handleSlideToggle 호출:', { slideId, activate, slideType })
       const slideRef = doc(db, 'slides', slideId)
-      const targetSlides = slideType ? slides.filter(s => s.slideType === slideType) : slides
-      const maxOrder = Math.max(...targetSlides.map(s => s.order || 0), 0)
+      
+      // 활성화하려는 경우 포스팅 기간 체크
+      if (activate) {
+        const currentSlide = slides.find(s => s.id === slideId)
+        if (currentSlide) {
+          const toMs = (value: any): number | null => {
+            if (!value) return null
+            try {
+              if (value.toDate) {
+                return value.toDate().getTime()
+              }
+              if (value.seconds) {
+                return value.seconds * 1000
+              }
+              if (value instanceof Date) {
+                return value.getTime()
+              }
+              if (typeof value === 'string') {
+                const parsed = Date.parse(value)
+                return isNaN(parsed) ? null : parsed
+              }
+            } catch (error) {
+              return null
+            }
+            return null
+          }
+          
+          const endMs = toMs(currentSlide.postingEnd)
+          const nowMs = Date.now()
+          
+          // 포스팅 기간이 지나갔으면 경고 메시지 표시
+          if (endMs !== null && endMs < nowMs) {
+            alert('포스팅 기간이 지나갔습니다. 기간을 수정하여 활성화하세요.')
+            return
+          }
+        }
+      }
+      
+      // slideType이 있으면 해당 타입만, 없으면 main 또는 타입이 없는 것만 필터링
+      const targetSlides = slideType 
+        ? slides.filter(s => s.slideType === slideType && s.id !== slideId) 
+        : slides.filter(s => (s.slideType === 'main' || !s.slideType) && s.id !== slideId)
+      
+      console.log('targetSlides:', targetSlides.length)
       
       if (activate) {
-        // 활성화: 상단으로 이동 (최대 order + 1)
+        // 활성화: 활성화된 슬라이드들 중 최대 order + 1
+        const activeSlides = targetSlides.filter(s => s.isActive)
+        const maxOrder = activeSlides.length > 0 
+          ? Math.max(...activeSlides.map(s => s.order || 0))
+          : 0
+        console.log('활성화 - maxOrder:', maxOrder)
         await updateDoc(slideRef, {
           isActive: true,
           order: maxOrder + 1,
           updatedAt: Timestamp.now()
         })
+        console.log('활성화 완료')
+        
+        // 활성화 시에도 로컬 상태 즉시 업데이트
+        setSlides(prevSlides => 
+          prevSlides.map(s => 
+            s.id === slideId ? { ...s, isActive: true, order: maxOrder + 1, updatedAt: Timestamp.now() } : s
+          )
+        )
       } else {
-        // 비활성화: OFF 영역으로 이동 (order는 유지하되 최소값으로 조정)
-        const inactiveMaxOrder = Math.max(...targetSlides.filter(s => !s.isActive).map(s => s.order || 0), 0)
-        await updateDoc(slideRef, {
+        // 비활성화: 비활성화된 슬라이드들 중 최대 order + 1
+        const inactiveSlides = targetSlides.filter(s => !s.isActive)
+        const inactiveMaxOrder = inactiveSlides.length > 0
+          ? Math.max(...inactiveSlides.map(s => s.order || 0))
+          : 0
+        console.log('비활성화 - inactiveMaxOrder:', inactiveMaxOrder)
+        const updateData = {
           isActive: false,
           order: inactiveMaxOrder + 1,
           updatedAt: Timestamp.now()
-        })
+        }
+        console.log('업데이트할 데이터:', updateData)
+        
+        // 로컬 상태를 먼저 즉시 업데이트하여 UI 반영 (빠른 응답)
+        setSlides(prevSlides => 
+          prevSlides.map(s => 
+            s.id === slideId ? { ...s, isActive: false, order: inactiveMaxOrder + 1, updatedAt: Timestamp.now() } : s
+          )
+        )
+        
+        // 데이터베이스 업데이트는 백그라운드에서 처리
+        await updateDoc(slideRef, updateData)
+        console.log('비활성화 완료 - 데이터베이스 업데이트 완료')
       }
       
-      fetchSlides()
+      // fetchSlides는 호출하지 않음 (로컬 상태만 업데이트하여 즉시 반영)
+      // OFF 슬라이드는 기간 체크하지 않으므로 fetchSlides 호출 불필요
+      // 데이터베이스는 이미 업데이트되었으므로 다음 fetchSlides 호출 시 반영됨
+      console.log('로컬 상태 업데이트 완료')
     } catch (error) {
       console.error('슬라이드 토글 오류:', error)
       alert('슬라이드 상태 변경 중 오류가 발생했습니다.')
@@ -542,79 +832,213 @@ const AdminPage: React.FC = () => {
   }
 
   const moveSlideUp = async (slideId: string, slideType?: 'main' | 'ad') => {
+    console.log(`[moveSlideUp] 시작 - slideId: ${slideId}, slideType: ${slideType}`)
     const targetSlides = slideType 
-      ? slides.filter(s => s.isActive && s.slideType === slideType).sort((a, b) => a.order - b.order)
-      : slides.filter(s => s.isActive && (s.slideType === 'main' || !s.slideType)).sort((a, b) => a.order - b.order)
+      ? slides.filter(s => s.isActive && s.slideType === slideType).sort((a, b) => {
+          // order가 같으면 id로 정렬하여 일관된 순서 유지
+          if (a.order === b.order) {
+            return a.id.localeCompare(b.id)
+          }
+          return a.order - b.order
+        })
+      : slides.filter(s => s.isActive && (s.slideType === 'main' || !s.slideType)).sort((a, b) => {
+          // order가 같으면 id로 정렬하여 일관된 순서 유지
+          if (a.order === b.order) {
+            return a.id.localeCompare(b.id)
+          }
+          return a.order - b.order
+        })
+    
+    console.log(`[moveSlideUp] targetSlides:`, targetSlides.map((s, idx) => ({ id: s.id, order: s.order, index: idx })))
     const currentIndex = targetSlides.findIndex(s => s.id === slideId)
+    console.log(`[moveSlideUp] currentIndex: ${currentIndex}, targetSlides.length: ${targetSlides.length}`)
     
     if (currentIndex > 0) {
       const currentSlide = targetSlides[currentIndex]
       const prevSlide = targetSlides[currentIndex - 1]
       
+      console.log(`[moveSlideUp] 현재 슬라이드: ${currentSlide.id} (order: ${currentSlide.order}, index: ${currentIndex}), 이전 슬라이드: ${prevSlide.id} (order: ${prevSlide.order}, index: ${currentIndex - 1})`)
+      
       try {
         const currentRef = doc(db, 'slides', currentSlide.id)
         const prevRef = doc(db, 'slides', prevSlide.id)
         
-        const tempOrder = currentSlide.order
+        // 같은 order 값을 가진 경우, order를 조정하여 순서 변경
+        let newCurrentOrder: number
+        let newPrevOrder: number
+        
+        if (currentSlide.order === prevSlide.order) {
+          // 같은 order 값을 가진 경우, 현재 슬라이드의 order를 이전 슬라이드의 order - 1로 설정
+          // 이전 슬라이드의 order는 그대로 유지
+          newCurrentOrder = prevSlide.order - 1
+          newPrevOrder = prevSlide.order
+        } else {
+          // 다른 order 값을 가진 경우, 단순히 교환
+          newCurrentOrder = prevSlide.order
+          newPrevOrder = currentSlide.order
+        }
+        
+        console.log(`[moveSlideUp] order 변경: 현재(${currentSlide.order} -> ${newCurrentOrder}), 이전(${prevSlide.order} -> ${newPrevOrder})`)
+        
+        // 로컬 상태를 먼저 즉시 업데이트하여 UI 반영
+        setSlides(prevSlides => 
+          prevSlides.map(s => {
+            if (s.id === currentSlide.id) {
+              return { ...s, order: newCurrentOrder, updatedAt: Timestamp.now() }
+            }
+            if (s.id === prevSlide.id) {
+              return { ...s, order: newPrevOrder, updatedAt: Timestamp.now() }
+            }
+            return s
+          })
+        )
+        
+        // 데이터베이스 업데이트는 백그라운드에서 처리
         await updateDoc(currentRef, {
-          order: prevSlide.order,
+          order: newCurrentOrder,
           updatedAt: Timestamp.now()
         })
         await updateDoc(prevRef, {
-          order: tempOrder,
+          order: newPrevOrder,
           updatedAt: Timestamp.now()
         })
         
-        fetchSlides()
+        console.log(`[moveSlideUp] 슬라이드 왼쪽으로 이동 완료: ${currentSlide.id} (${currentSlide.order} -> ${newCurrentOrder}), ${prevSlide.id} (${prevSlide.order} -> ${newPrevOrder})`)
       } catch (error) {
         console.error('슬라이드 이동 오류:', error)
         alert('슬라이드 이동 중 오류가 발생했습니다.')
+        // 오류 발생 시 fetchSlides로 복구
+        fetchSlides()
       }
+    } else {
+      console.log(`[moveSlideUp] 이동 불가: currentIndex가 0 이하입니다 (${currentIndex})`)
     }
   }
 
   const moveSlideDown = async (slideId: string, slideType?: 'main' | 'ad') => {
+    console.log(`[moveSlideDown] 시작 - slideId: ${slideId}, slideType: ${slideType}`)
     const targetSlides = slideType 
-      ? slides.filter(s => s.isActive && s.slideType === slideType).sort((a, b) => a.order - b.order)
-      : slides.filter(s => s.isActive && (s.slideType === 'main' || !s.slideType)).sort((a, b) => a.order - b.order)
+      ? slides.filter(s => s.isActive && s.slideType === slideType).sort((a, b) => {
+          // order가 같으면 id로 정렬하여 일관된 순서 유지
+          if (a.order === b.order) {
+            return a.id.localeCompare(b.id)
+          }
+          return a.order - b.order
+        })
+      : slides.filter(s => s.isActive && (s.slideType === 'main' || !s.slideType)).sort((a, b) => {
+          // order가 같으면 id로 정렬하여 일관된 순서 유지
+          if (a.order === b.order) {
+            return a.id.localeCompare(b.id)
+          }
+          return a.order - b.order
+        })
+    
+    console.log(`[moveSlideDown] targetSlides:`, targetSlides.map((s, idx) => ({ id: s.id, order: s.order, index: idx })))
     const currentIndex = targetSlides.findIndex(s => s.id === slideId)
+    console.log(`[moveSlideDown] currentIndex: ${currentIndex}, targetSlides.length: ${targetSlides.length}`)
     
     if (currentIndex < targetSlides.length - 1) {
       const currentSlide = targetSlides[currentIndex]
       const nextSlide = targetSlides[currentIndex + 1]
       
+      console.log(`[moveSlideDown] 현재 슬라이드: ${currentSlide.id} (order: ${currentSlide.order}, index: ${currentIndex}), 다음 슬라이드: ${nextSlide.id} (order: ${nextSlide.order}, index: ${currentIndex + 1})`)
+      
       try {
         const currentRef = doc(db, 'slides', currentSlide.id)
         const nextRef = doc(db, 'slides', nextSlide.id)
         
-        const tempOrder = currentSlide.order
+        // 같은 order 값을 가진 경우, order를 조정하여 순서 변경
+        let newCurrentOrder: number
+        let newNextOrder: number
+        
+        if (currentSlide.order === nextSlide.order) {
+          // 같은 order 값을 가진 경우, 다음 슬라이드 이후의 order 값을 확인
+          // 현재 슬라이드를 다음 위치로 이동하려면, 다음 슬라이드의 order를 사용하되
+          // 그 다음 슬라이드가 있으면 그 order 값을 확인하여 적절히 조정
+          
+          if (currentIndex + 2 < targetSlides.length) {
+            // 그 다음 슬라이드가 있는 경우
+            const nextNextSlide = targetSlides[currentIndex + 2]
+            if (nextNextSlide.order === nextSlide.order) {
+              // 그 다음 슬라이드도 같은 order이면, 현재 슬라이드의 order를 다음 슬라이드의 order로 설정
+              // 다음 슬라이드의 order는 그대로 유지 (id 정렬로 순서가 바뀜)
+              newCurrentOrder = nextSlide.order
+              newNextOrder = currentSlide.order
+            } else {
+              // 그 다음 슬라이드가 다른 order이면, 현재 슬라이드의 order를 그 다음 슬라이드의 order로 설정
+              // 다음 슬라이드의 order는 그대로 유지
+              newCurrentOrder = nextNextSlide.order
+              newNextOrder = nextSlide.order
+            }
+          } else {
+            // 그 다음 슬라이드가 없는 경우 (다음 슬라이드가 마지막)
+            // 현재 슬라이드의 order를 다음 슬라이드의 order + 1로 설정
+            // 다음 슬라이드의 order는 그대로 유지
+            newCurrentOrder = nextSlide.order + 1
+            newNextOrder = nextSlide.order
+          }
+        } else {
+          // 다른 order 값을 가진 경우, 단순히 교환
+          newCurrentOrder = nextSlide.order
+          newNextOrder = currentSlide.order
+        }
+        
+        console.log(`[moveSlideDown] order 변경: 현재(${currentSlide.order} -> ${newCurrentOrder}), 다음(${nextSlide.order} -> ${newNextOrder})`)
+        
+        // 로컬 상태를 먼저 즉시 업데이트하여 UI 반영
+        setSlides(prevSlides => 
+          prevSlides.map(s => {
+            if (s.id === currentSlide.id) {
+              return { ...s, order: newCurrentOrder, updatedAt: Timestamp.now() }
+            }
+            if (s.id === nextSlide.id) {
+              return { ...s, order: newNextOrder, updatedAt: Timestamp.now() }
+            }
+            return s
+          })
+        )
+        
+        // 데이터베이스 업데이트는 백그라운드에서 처리
         await updateDoc(currentRef, {
-          order: nextSlide.order,
+          order: newCurrentOrder,
           updatedAt: Timestamp.now()
         })
         await updateDoc(nextRef, {
-          order: tempOrder,
+          order: newNextOrder,
           updatedAt: Timestamp.now()
         })
         
-        fetchSlides()
+        console.log(`[moveSlideDown] 슬라이드 오른쪽으로 이동 완료: ${currentSlide.id} (${currentSlide.order} -> ${newCurrentOrder}), ${nextSlide.id} (${nextSlide.order} -> ${newNextOrder})`)
       } catch (error) {
         console.error('슬라이드 이동 오류:', error)
         alert('슬라이드 이동 중 오류가 발생했습니다.')
+        // 오류 발생 시 fetchSlides로 복구
+        fetchSlides()
       }
+    } else {
+      console.log(`[moveSlideDown] 이동 불가: currentIndex가 마지막입니다 (${currentIndex}/${targetSlides.length - 1})`)
     }
   }
 
   const handleDeleteSlide = async (slideId: string) => {
-    if (window.confirm('정말 이 슬라이드를 삭제하시겠습니까?')) {
-      try {
-        const slideRef = doc(db, 'slides', slideId)
-        await deleteDoc(slideRef)
-        fetchSlides()
-      } catch (error) {
-        console.error('슬라이드 삭제 오류:', error)
-        alert('슬라이드 삭제 중 오류가 발생했습니다.')
-      }
+    const slide = slides.find(s => s.id === slideId)
+    const slideTitle = slide?.title || '이 슬라이드'
+    const confirmed = window.confirm(`정말 "${slideTitle}" 슬라이드를 삭제하시겠습니까?\n\n삭제된 데이터는 복구할 수 없습니다.`)
+    if (!confirmed) {
+      return
+    }
+    
+    try {
+      setLoading(true)
+      const slideRef = doc(db, 'slides', slideId)
+      await deleteDoc(slideRef)
+      alert('슬라이드가 삭제되었습니다.')
+      fetchSlides()
+    } catch (error) {
+      console.error('슬라이드 삭제 오류:', error)
+      alert('슬라이드 삭제 중 오류가 발생했습니다.')
+    } finally {
+      setLoading(false)
     }
   }
 
@@ -699,15 +1123,24 @@ const AdminPage: React.FC = () => {
 
   // 도서 삭제
   const handleDeleteBook = async (bookId: string) => {
-    if (window.confirm('정말 이 도서를 삭제하시겠습니까?')) {
-      try {
-        const bookRef = doc(db, 'books', bookId)
-        await deleteDoc(bookRef)
-        fetchBooks()
-      } catch (error) {
-        console.error('도서 삭제 오류:', error)
-        alert('도서 삭제 중 오류가 발생했습니다.')
-      }
+    const book = books.find(b => b.id === bookId)
+    const bookTitle = book?.title || '이 도서'
+    const confirmed = window.confirm(`정말 "${bookTitle}" 도서를 삭제하시겠습니까?\n\n삭제된 데이터는 복구할 수 없습니다.`)
+    if (!confirmed) {
+      return
+    }
+    
+    try {
+      setLoading(true)
+      const bookRef = doc(db, 'books', bookId)
+      await deleteDoc(bookRef)
+      alert('도서가 삭제되었습니다.')
+      fetchBooks()
+    } catch (error) {
+      console.error('도서 삭제 오류:', error)
+      alert('도서 삭제 중 오류가 발생했습니다.')
+    } finally {
+      setLoading(false)
     }
   }
 
@@ -732,6 +1165,61 @@ const AdminPage: React.FC = () => {
     if (!text || text === '-') return text || '-'
     if (text.length <= maxLength) return text
     return text.substring(0, maxLength) + '...'
+  }
+
+  // 도서 설명을 5줄로 제한하는 함수
+  const truncateDescriptionToLines = (text: string, maxLines: number = 5): string => {
+    if (!text || text === '-') return text || '-'
+    
+    // 블록 요소를 줄바꿈으로 변환 (div, p 등)
+    let plainText = text
+      .replace(/<\/div>/gi, '\n')
+      .replace(/<\/p>/gi, '\n')
+      .replace(/<\/li>/gi, '\n')
+      .replace(/<\/h[1-6]>/gi, '\n')
+      .replace(/<br\s*\/?>/gi, '\n')
+      .replace(/<br\s*\/?>/gi, '\n') // 중복 제거를 위해 한 번 더
+    
+    // 다른 HTML 태그 제거 (열리는 태그는 제거, 닫는 태그는 이미 처리됨)
+    plainText = plainText.replace(/<[^>]*>/g, '')
+    
+    // HTML 엔티티 디코딩
+    plainText = plainText
+      .replace(/&nbsp;/g, ' ')
+      .replace(/&amp;/g, '&')
+      .replace(/&lt;/g, '<')
+      .replace(/&gt;/g, '>')
+      .replace(/&quot;/g, '"')
+      .replace(/&#39;/g, "'")
+      .replace(/&apos;/g, "'")
+      .replace(/&#160;/g, ' ') // &nbsp;의 숫자 코드
+    
+    // 연속된 줄바꿈을 하나로 정리 (최대 2개 연속 허용)
+    plainText = plainText.replace(/\n{3,}/g, '\n\n')
+    
+    // 앞뒤 공백 제거
+    plainText = plainText.trim()
+    if (!plainText) return '-'
+    
+    // 줄바꿈 기준으로 분리
+    const lines = plainText.split(/\r?\n/)
+    
+    // 빈 줄 제거하지 않고 유지
+    const filteredLines = lines.filter((line, index) => {
+      // 첫 줄과 마지막 줄의 빈 줄은 제거
+      if (index === 0 || index === lines.length - 1) {
+        return line.trim().length > 0
+      }
+      return true // 중간 줄은 빈 줄도 유지
+    })
+    
+    // 줄 수가 maxLines 이하면 그대로 반환
+    if (filteredLines.length <= maxLines) {
+      return filteredLines.join('\n')
+    }
+    
+    // maxLines만큼만 반환하고 나머지는 생략
+    return filteredLines.slice(0, maxLines).join('\n') + '...'
   }
 
   // 카테고리 변경
@@ -768,19 +1256,38 @@ const AdminPage: React.FC = () => {
     }
   }
 
-  // 날짜 포맷팅 함수
+  // 날짜 포맷팅 함수 (yy/mm/dd 형식)
   const formatDate = (timestamp: any): string => {
     if (!timestamp) return '-'
     try {
+      let date: Date
       if (timestamp.toDate) {
-        return timestamp.toDate().toISOString().split('T')[0]
+        date = timestamp.toDate()
       } else if (timestamp.seconds) {
-        return new Date(timestamp.seconds * 1000).toISOString().split('T')[0]
+        date = new Date(timestamp.seconds * 1000)
+      } else if (timestamp instanceof Date) {
+        date = timestamp
+      } else if (typeof timestamp === 'string') {
+        date = new Date(timestamp)
+      } else {
+        return '-'
       }
-      return '-'
+      
+      if (isNaN(date.getTime())) return '-'
+      
+      const year = String(date.getFullYear()).slice(-2)
+      const month = String(date.getMonth() + 1).padStart(2, '0')
+      const day = String(date.getDate()).padStart(2, '0')
+      return `${year}/${month}/${day}`
     } catch (error) {
       return '-'
     }
+  }
+
+  // 서평신청갯수 포맷팅 함수 (n/3 형식)
+  const formatReviewCount = (count: number | undefined): string => {
+    const reviewCount = count || 0
+    return `${reviewCount}/3`
   }
 
   // 회원 가입일 포맷팅 함수 (25/11/11 13:35 형식)
@@ -994,8 +1501,20 @@ const AdminPage: React.FC = () => {
   const renderContent = () => {
     switch (activeMenu) {
       case 'main-slide':
-        const activeSlides = slides.filter(slide => slide.isActive).sort((a, b) => a.order - b.order)
-        const inactiveSlides = slides.filter(slide => !slide.isActive).sort((a, b) => a.order - b.order)
+        const activeSlides = slides.filter(slide => slide.isActive && (slide.slideType === 'main' || !slide.slideType)).sort((a, b) => {
+          // order가 같으면 id로 정렬하여 일관된 순서 유지
+          if (a.order === b.order) {
+            return a.id.localeCompare(b.id)
+          }
+          return a.order - b.order
+        })
+        const inactiveSlides = slides.filter(slide => !slide.isActive && (slide.slideType === 'main' || !slide.slideType)).sort((a, b) => {
+          // order가 같으면 id로 정렬하여 일관된 순서 유지
+          if (a.order === b.order) {
+            return a.id.localeCompare(b.id)
+          }
+          return a.order - b.order
+        })
         
         return (
           <div className="content-section slide-management-section">
@@ -1009,17 +1528,20 @@ const AdminPage: React.FC = () => {
                   }
                 }}
                 style={{
-                  padding: '8px 16px',
-                  background: '#667eea',
-                  color: 'white',
+                  padding: '4px',
+                  background: 'transparent',
                   border: 'none',
                   borderRadius: '6px',
                   cursor: 'pointer',
-                  fontSize: '0.9rem',
-                  fontWeight: 500
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '4px'
                 }}
               >
-                DB 업데이트
+                <img src={dbUpdateIcon} alt="DB 업데이트" style={{ width: '48px', height: '48px' }} />
+                <span style={{ fontSize: '10px', fontWeight: 500, color: '#333', textAlign: 'center' }}>DB UPDATE</span>
               </button>
             </div>
             
@@ -1030,7 +1552,9 @@ const AdminPage: React.FC = () => {
                 <span className="slide-count">{activeSlides.length}개 활성</span>
               </div>
               <div className="slides-grid">
-                {activeSlides.map((slide, index) => (
+                {activeSlides.map((slide, index) => {
+                  console.log(`[렌더링] 슬라이드 ${slide.id} - index: ${index}, order: ${slide.order}`)
+                  return (
                   <div key={slide.id} className="slide-card">
                     <div className="slide-image-container">
                       {slide.imageUrl ? (
@@ -1067,9 +1591,20 @@ const AdminPage: React.FC = () => {
                           <input
                             type="checkbox"
                             checked={slide.isActive}
-                            onChange={() => handleSlideToggle(slide.id, false, 'main')}
+                            onChange={(e) => {
+                              e.preventDefault()
+                              e.stopPropagation()
+                              console.log('ON AIR 체크박스 클릭:', { slideId: slide.id, currentIsActive: slide.isActive, willBeActive: !slide.isActive })
+                              handleSlideToggle(slide.id, !slide.isActive, 'main')
+                            }}
                           />
-                          <span className="toggle-slider">활성</span>
+                          <span className="toggle-slider">
+                            <img 
+                              src={slide.isActive ? onButtonIcon : offButtonIcon} 
+                              alt={slide.isActive ? "활성" : "비활성"} 
+                              style={{ width: '64px', height: '64px' }} 
+                            />
+                          </span>
                         </label>
                         {renderPostingPeriod(slide)}
                         <div className="slide-action-buttons">
@@ -1083,31 +1618,39 @@ const AdminPage: React.FC = () => {
                             }}
                             title="편집"
                           >
-                            ✏️
+                            <img src={editIcon} alt="편집" style={{ width: '24px', height: '24px' }} />
                           </button>
                           <button 
                             type="button"
                             className="slide-move-btn"
                             onClick={(e) => {
+                              e.preventDefault()
                               e.stopPropagation()
-                              moveSlideUp(slide.id, 'main')
+                              console.log(`[버튼 클릭] 왼쪽 이동 - slideId: ${slide.id}, index: ${index}, disabled: ${index === 0}`)
+                              if (index > 0) {
+                                moveSlideUp(slide.id, 'main')
+                              }
                             }}
                             disabled={index === 0}
                             title="왼쪽으로 이동"
                           >
-                            ←
+                            <img src={leftArrowIcon} alt="왼쪽 이동" style={{ width: '24px', height: '24px' }} />
                           </button>
                           <button 
                             type="button"
                             className="slide-move-btn"
                             onClick={(e) => {
+                              e.preventDefault()
                               e.stopPropagation()
-                              moveSlideDown(slide.id, 'main')
+                              console.log(`[버튼 클릭] 오른쪽 이동 - slideId: ${slide.id}, index: ${index}, disabled: ${index === activeSlides.length - 1}`)
+                              if (index < activeSlides.length - 1) {
+                                moveSlideDown(slide.id, 'main')
+                              }
                             }}
                             disabled={index === activeSlides.length - 1}
                             title="오른쪽으로 이동"
                           >
-                            →
+                            <img src={rightArrowIcon} alt="오른쪽 이동" style={{ width: '24px', height: '24px' }} />
                           </button>
                           <button 
                             type="button"
@@ -1118,13 +1661,14 @@ const AdminPage: React.FC = () => {
                             }}
                             title="삭제"
                           >
-                            🗑️
+                            <img src={trashIcon} alt="삭제" style={{ width: '24px', height: '24px' }} />
                           </button>
                         </div>
                       </div>
                     </div>
                   </div>
-                ))}
+                  )
+                })}
                 
                 {/* 새 슬라이드 추가 영역 */}
                 <div 
@@ -1135,7 +1679,9 @@ const AdminPage: React.FC = () => {
                   }}
                 >
                   <div className="add-slide-area">
-                    <div className="add-slide-icon">📷+</div>
+                    <div className="add-slide-icon">
+                      <img src={addImageIcon} alt="슬라이드 추가" style={{ width: '64px', height: '64px' }} />
+                    </div>
                     <p>슬라이드 추가</p>
                     <button className="add-slide-button">+ 새 슬라이드 추가</button>
                   </div>
@@ -1190,9 +1736,20 @@ const AdminPage: React.FC = () => {
                             <input
                               type="checkbox"
                               checked={slide.isActive}
-                              onChange={() => handleSlideToggle(slide.id, true)}
+                              onChange={(e) => {
+                                e.preventDefault()
+                                e.stopPropagation()
+                                console.log('OFF 체크박스 클릭:', { slideId: slide.id, currentIsActive: slide.isActive, willBeActive: !slide.isActive })
+                                handleSlideToggle(slide.id, !slide.isActive, 'main')
+                              }}
                             />
-                            <span className="toggle-slider">비활성</span>
+                            <span className="toggle-slider">
+                              <img 
+                                src={slide.isActive ? onButtonIcon : offButtonIcon} 
+                                alt={slide.isActive ? "활성" : "비활성"} 
+                                style={{ width: '64px', height: '64px' }} 
+                              />
+                            </span>
                           </label>
                           {renderPostingPeriod(slide)}
                           <div className="slide-action-buttons">
@@ -1206,7 +1763,7 @@ const AdminPage: React.FC = () => {
                               }}
                               title="편집"
                             >
-                              ✏️
+                              <img src={editIcon} alt="편집" style={{ width: '24px', height: '24px' }} />
                             </button>
                             <button 
                               type="button"
@@ -1217,7 +1774,7 @@ const AdminPage: React.FC = () => {
                               }}
                               title="삭제"
                             >
-                              🗑️
+                              <img src={trashIcon} alt="삭제" style={{ width: '24px', height: '24px' }} />
                             </button>
                           </div>
                         </div>
@@ -1236,7 +1793,32 @@ const AdminPage: React.FC = () => {
           <div className="content-section books-section">
             <div className="books-header">
               <div className="header-left">
-                <h2>📚 도서 관리</h2>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '20px' }}>
+                  <h2 style={{ margin: 0 }}>📚 도서 관리</h2>
+                  <button 
+                    onClick={async () => {
+                      if (confirm('도서 데이터베이스를 최신 스키마로 업데이트하시겠습니까?')) {
+                        await runBooksUpdate()
+                        fetchBooks() // 업데이트 후 목록 새로고침
+                      }
+                    }}
+                    style={{
+                      padding: '4px',
+                      background: 'transparent',
+                      border: 'none',
+                      borderRadius: '6px',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '4px'
+                    }}
+                  >
+                    <img src={dbUpdateIcon} alt="DB 업데이트" style={{ width: '48px', height: '48px' }} />
+                    <span style={{ fontSize: '10px', fontWeight: 500, color: '#333', textAlign: 'center' }}>DB UPDATE</span>
+                  </button>
+                </div>
             <div className="book-stats-container">
               <div className="book-stat-card" style={{ backgroundColor: statCardColors[0] }}>
                 <div className="stat-label">등록된 도서</div>
@@ -1319,13 +1901,20 @@ const AdminPage: React.FC = () => {
                           </div>
                         )}
                       </div>
-                      <div className="book-info" style={{ display: 'block', visibility: 'visible', opacity: 1, flex: 1, minWidth: 0 }}>
-                        <h3 className="book-title" style={{ fontSize: '24px', fontWeight: 700, color: '#000000', margin: '0 0 0.5rem 0', lineHeight: 1.4, display: 'block' }}>{book.title}</h3>
-                        <p className="book-author" style={{ fontSize: '20px', fontWeight: 500, color: '#000000', margin: '0 0 0.5rem 0', lineHeight: 1.4, display: 'block' }}>{book.author}</p>
-                        <p className="book-description" style={{ fontSize: '18px', color: '#000000', margin: 0, lineHeight: 1.6, display: 'block' }}>{truncateText(book.description || '도서 설명이 없습니다.')}</p>
+                      <div className="book-title-author-section">
+                        <h3 className="book-title">{truncateText(book.title, 14)}</h3>
+                        <p className="book-author">{book.author}</p>
+                      </div>
+                    </div>
+                    <div className="book-card-middle">
+                      <div className="book-description-section">
+                        <p className="book-description" style={{ whiteSpace: 'pre-wrap' }}>
+                          {truncateDescriptionToLines(book.description || '도서 설명이 없습니다.', 5)}
+                        </p>
                       </div>
                     </div>
                     <div className="book-card-right">
+                      <div className="book-right-top">
                         <div className="category-dropdown-container" onClick={(e) => e.stopPropagation()}>
                           <button 
                             className="category-tag" 
@@ -1335,29 +1924,31 @@ const AdminPage: React.FC = () => {
                             {getCategoryLabel(book.category || '')}
                             <span className="dropdown-arrow">▼</span>
                           </button>
-                        {openCategoryDropdown === book.id && (
-                          <div className="category-dropdown-menu">
-                            <button 
-                              className={`dropdown-item ${book.category === '서평도서' ? 'active' : ''}`}
-                              onClick={() => handleCategoryChange(book.id, '서평도서')}
-                            >
-                              서평
-                            </button>
-                            <button 
-                              className={`dropdown-item ${book.category === '출간도서' ? 'active' : ''}`}
-                              onClick={() => handleCategoryChange(book.id, '출간도서')}
-                            >
-                              출간
-                            </button>
-                            <button 
-                              className={`dropdown-item ${book.category === '추천도서' ? 'active' : ''}`}
-                              onClick={() => handleCategoryChange(book.id, '추천도서')}
-                            >
-                              추천
-                            </button>
-                          </div>
-                        )}
+                          {openCategoryDropdown === book.id && (
+                            <div className="category-dropdown-menu">
+                              <button 
+                                className={`dropdown-item ${book.category === '서평도서' ? 'active' : ''}`}
+                                onClick={() => handleCategoryChange(book.id, '서평도서')}
+                              >
+                                서평
+                              </button>
+                              <button 
+                                className={`dropdown-item ${book.category === '출간도서' ? 'active' : ''}`}
+                                onClick={() => handleCategoryChange(book.id, '출간도서')}
+                              >
+                                출간
+                              </button>
+                              <button 
+                                className={`dropdown-item ${book.category === '추천도서' ? 'active' : ''}`}
+                                onClick={() => handleCategoryChange(book.id, '추천도서')}
+                              >
+                                추천
+                              </button>
+                            </div>
+                          )}
+                        </div>
                       </div>
+                      <div className="book-right-bottom">
                         <div className="book-actions" onClick={(e) => e.stopPropagation()}>
                           <button 
                             className="move-btn move-up"
@@ -1383,6 +1974,7 @@ const AdminPage: React.FC = () => {
                             🗑️
                           </button>
                         </div>
+                      </div>
                     </div>
                   </div>
                 ))
@@ -1630,6 +2222,32 @@ const AdminPage: React.FC = () => {
         const filteredMembers = getFilteredMembers()
         return (
           <div className="member-management-page">
+            <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '20px' }}>
+              <h2 style={{ margin: 0 }}>👥 회원 관리</h2>
+              <button 
+                onClick={async () => {
+                  if (confirm('회원 데이터베이스를 최신 스키마로 업데이트하시겠습니까?')) {
+                    await runMembersUpdate()
+                    fetchMembers() // 업데이트 후 목록 새로고침
+                  }
+                }}
+                style={{
+                  padding: '4px',
+                  background: 'transparent',
+                  border: 'none',
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '4px'
+                }}
+              >
+                <img src={dbUpdateIcon} alt="DB 업데이트" style={{ width: '48px', height: '48px' }} />
+                <span style={{ fontSize: '10px', fontWeight: 500, color: '#333', textAlign: 'center' }}>DB UPDATE</span>
+              </button>
+            </div>
             <div className="member-table-container">
               <table className="member-table">
                 <thead>
@@ -1765,7 +2383,32 @@ const AdminPage: React.FC = () => {
         
         return (
           <div className="content-section">
-            <h2>Admin - 서평 관리</h2>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '20px' }}>
+              <h2 style={{ margin: 0 }}>💬 서평 관리</h2>
+              <button 
+                onClick={async () => {
+                  if (confirm('서평 신청 데이터베이스를 최신 스키마로 업데이트하시겠습니까?')) {
+                    await runReviewsUpdate()
+                    fetchReviewApplications() // 업데이트 후 목록 새로고침
+                  }
+                }}
+                style={{
+                  padding: '4px',
+                  background: 'transparent',
+                  border: 'none',
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '4px'
+                }}
+              >
+                <img src={dbUpdateIcon} alt="DB 업데이트" style={{ width: '48px', height: '48px' }} />
+                <span style={{ fontSize: '10px', fontWeight: 500, color: '#333', textAlign: 'center' }}>DB UPDATE</span>
+              </button>
+            </div>
             <div className="review-management">
               <div className="review-applications-table-container">
                 {/* 필터 컨트롤 - 정보출력 컬럼 위에 배치 */}
@@ -1925,7 +2568,7 @@ const AdminPage: React.FC = () => {
                     </span>
                   </div>
                 )}
-                <table className="review-applications-table">
+                <table className="review-applications-table" style={{ width: '1495px', tableLayout: 'fixed', borderCollapse: 'collapse' }}>
                   <thead>
                     <tr>
                       <th>회원ID</th>
@@ -1954,31 +2597,48 @@ const AdminPage: React.FC = () => {
                         <td colSpan={14} className="empty-cell">서평 신청 내역이 없습니다.</td>
                       </tr>
                     ) : (
-                      filteredApplications.map((app) => (
+                      filteredApplications.map((app) => {
+                        // 회원 ID 표시: applicantId가 있으면 사용, 없으면 '-' 표시
+                        console.log('앱 데이터:', {
+                          서평ID: app.서평ID,
+                          applicantId: app.applicantId,
+                          applicantId타입: typeof app.applicantId,
+                          회원ID: app.회원ID
+                        })
+                        const displayMemberId = app.applicantId && typeof app.applicantId === 'string' && app.applicantId.trim() !== '' 
+                          ? truncateText(app.applicantId, 12) 
+                          : '-'
+                        return (
                         <tr key={app.서평ID}>
-                          <td>{app.applicantId || app.회원ID}</td>
-                          <td>{app.applicantName || '-'}</td>
+                          <td>{displayMemberId}</td>
+                          <td>{truncateText(app.applicantName || '-', 10)}</td>
                           <td>{app.applicantNickname || '-'}</td>
-                          <td>{app.applicantPhone || '-'}</td>
+                          <td>{truncateText(app.applicantPhone || '-', 15)}</td>
                           <td>
                             <a 
                               href={`#book-${app.도서ID}`}
                               style={{ color: '#667eea', textDecoration: 'none' }}
                             >
-                              {app.bookTitle || '-'}
+                              {truncateText(app.bookTitle || '-', 20)}
                             </a>
                           </td>
                           <td>{formatDate(app.신청일)}</td>
-                          <td>{app.서평갯수 || 0}</td>
-                          <td>
+                          <td>{formatReviewCount(app.서평갯수)}</td>
+                          <td style={{ textAlign: 'center' }}>
                             <select
                               value={app.처리상태}
                               onChange={(e) => handleStatusChange(app.서평ID, e.target.value as any)}
+                              className="status-select"
                               style={{
                                 padding: '4px 8px',
                                 borderRadius: '4px',
                                 border: '1px solid #ddd',
-                                fontSize: '0.9rem'
+                                fontSize: '0.9rem',
+                                textAlign: 'center',
+                                width: '100%',
+                                maxWidth: '120px',
+                                margin: '0 auto',
+                                display: 'block'
                               }}
                             >
                               <option value="서평신청">서평신청</option>
@@ -1998,7 +2658,7 @@ const AdminPage: React.FC = () => {
                           <td>{formatDate(app.발송일)}</td>
                           <td>{formatDate(app.완료일)}</td>
                           <td>
-                            {app.applicantBlog ? (
+                            {app.처리상태 === '서평완료' && app.applicantBlog ? (
                               <a 
                                 href={app.applicantBlog.startsWith('http') ? app.applicantBlog : `https://${app.applicantBlog}`}
                                 target="_blank"
@@ -2007,23 +2667,14 @@ const AdminPage: React.FC = () => {
                               >
                                 블로그
                               </a>
+                            ) : app.처리상태 === '서평완료' ? (
+                              <span style={{ color: '#999', fontSize: '0.85rem' }}>-</span>
                             ) : (
-                              <button 
-                                style={{
-                                  padding: '4px 8px',
-                                  background: '#f0f0f0',
-                                  border: '1px solid #ddd',
-                                  borderRadius: '4px',
-                                  cursor: 'pointer',
-                                  fontSize: '0.85rem'
-                                }}
-                              >
-                                블로그 링크
-                              </button>
+                              <span style={{ color: '#999', fontSize: '0.85rem' }}>-</span>
                             )}
                           </td>
                           <td>
-                            {app.applicantInstagram ? (
+                            {app.처리상태 === '서평완료' && app.applicantInstagram ? (
                               <a 
                                 href={app.applicantInstagram.startsWith('http') ? app.applicantInstagram : `https://${app.applicantInstagram}`}
                                 target="_blank"
@@ -2032,19 +2683,10 @@ const AdminPage: React.FC = () => {
                               >
                                 인스타
                               </a>
+                            ) : app.처리상태 === '서평완료' ? (
+                              <span style={{ color: '#999', fontSize: '0.85rem' }}>-</span>
                             ) : (
-                              <button 
-                                style={{
-                                  padding: '4px 8px',
-                                  background: '#f0f0f0',
-                                  border: '1px solid #ddd',
-                                  borderRadius: '4px',
-                                  cursor: 'pointer',
-                                  fontSize: '0.85rem'
-                                }}
-                              >
-                                인스타 링크
-                              </button>
+                              <span style={{ color: '#999', fontSize: '0.85rem' }}>-</span>
                             )}
                           </td>
                           <td>
@@ -2078,7 +2720,8 @@ const AdminPage: React.FC = () => {
                             />
                           </td>
                         </tr>
-                      ))
+                        );
+                      })
                     )}
                   </tbody>
                 </table>

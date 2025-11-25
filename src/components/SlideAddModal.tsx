@@ -1,8 +1,13 @@
 import React, { useState, useEffect } from 'react'
-import { collection, addDoc, doc, updateDoc, Timestamp, getDocs, query, orderBy, where } from 'firebase/firestore'
+import { collection, addDoc, doc, updateDoc, Timestamp, getDocs, getDoc, query, orderBy, where } from 'firebase/firestore'
 import { db } from '../firebase'
 import ColorPaletteMenu from './ColorPaletteMenu'
 import './SlideAddModal.css'
+// 아이콘 이미지 import
+import calendarIcon from '../assets/icons/calendar64.png'
+import colorPaletteIcon from '../assets/icons/color-palette.png'
+import changeImageIcon from '../assets/icons/chagne-image64-1.png'
+import trashIcon64 from '../assets/icons/Trash64-1.png'
 
 interface SlideData {
   id?: string
@@ -279,7 +284,7 @@ const SlideAddModal: React.FC<SlideAddModalProps> = ({ isOpen, onClose, onSucces
     const uploadPreset = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET
 
     if (!cloudName || !uploadPreset) {
-      console.error('Cloudinary 환경 변수가 설정되지 않았습니다. VITE_CLOUDINARY_CLOUD_NAME / VITE_CLOUDINARY_UPLOAD_PRESET 값이 필요합니다.')
+      console.warn('Cloudinary 환경 변수가 설정되지 않았습니다. VITE_CLOUDINARY_CLOUD_NAME / VITE_CLOUDINARY_UPLOAD_PRESET 값이 필요합니다.')
       return
     }
 
@@ -307,13 +312,13 @@ const SlideAddModal: React.FC<SlideAddModalProps> = ({ isOpen, onClose, onSucces
         )
 
         if (!widget) {
-          console.error('Cloudinary 위젯 생성에 실패했습니다. 설정을 확인해주세요.')
+          console.warn('Cloudinary 위젯 생성에 실패했습니다. 설정을 확인해주세요.')
           return
         }
 
         widgetRef.current = widget
       } catch (error) {
-        console.error('Cloudinary 위젯 생성 중 오류:', error)
+        console.warn('Cloudinary 위젯 생성 중 오류:', error)
       }
     }
     if (window.cloudinary) {
@@ -335,7 +340,7 @@ const SlideAddModal: React.FC<SlideAddModalProps> = ({ isOpen, onClose, onSucces
       scriptEl.dataset.cloudinaryWidget = 'true'
       scriptEl.addEventListener('load', handleScriptLoad)
       scriptEl.addEventListener('error', () => {
-        console.error('Cloudinary 스크립트를 불러오지 못했습니다.')
+        console.warn('Cloudinary 스크립트를 불러오지 못했습니다.')
       })
       document.body.appendChild(scriptEl)
     } else {
@@ -404,7 +409,7 @@ const SlideAddModal: React.FC<SlideAddModalProps> = ({ isOpen, onClose, onSucces
     const uploadPreset = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET
 
     if (!cloudName || !uploadPreset) {
-      console.error('Cloudinary 설정이 없습니다. 위젯을 생성할 수 없습니다.')
+      console.warn('Cloudinary 설정이 없습니다. 위젯을 생성할 수 없습니다.')
       return
     }
 
@@ -431,7 +436,7 @@ const SlideAddModal: React.FC<SlideAddModalProps> = ({ isOpen, onClose, onSucces
       )
 
       if (!widget) {
-        console.error('Cloudinary 위젯 생성에 실패했습니다.')
+        console.warn('Cloudinary 위젯 생성에 실패했습니다.')
         return
       }
 
@@ -452,7 +457,7 @@ const SlideAddModal: React.FC<SlideAddModalProps> = ({ isOpen, onClose, onSucces
   }
 
   const handleCloudinaryError = (error: string) => {
-    console.error('Cloudinary 업로드 오류:', error)
+    console.warn('Cloudinary 업로드 오류:', error)
     alert(error)
   }
 
@@ -488,6 +493,19 @@ const SlideAddModal: React.FC<SlideAddModalProps> = ({ isOpen, onClose, onSucces
       }
       return updated
     })
+  }
+
+  const checkPostingPeriod = () => {
+    if (!formData.postingStart || !formData.postingEnd) {
+      return false
+    }
+    const startDate = new Date(formData.postingStart)
+    const endDate = new Date(formData.postingEnd)
+    if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
+      return false
+    }
+    const now = new Date()
+    return endDate >= now
   }
 
   const isFormValid = () => {
@@ -536,6 +554,26 @@ const SlideAddModal: React.FC<SlideAddModalProps> = ({ isOpen, onClose, onSucces
       return
     }
 
+    const startTimestamp = postingStartDate ? Timestamp.fromDate(postingStartDate) : null
+    const endTimestamp = postingEndDate ? Timestamp.fromDate(postingEndDate) : null
+
+    console.log('포스팅 기간 변환:', {
+      postingStartDate,
+      postingEndDate,
+      startTimestamp,
+      endTimestamp
+    })
+
+    const shouldBeActive = checkPostingPeriod()
+    
+    // 포스팅 기간이 지나갔는데 활성화하려는 경우 경고
+    const now = new Date()
+    if (endTimestamp && endTimestamp.toDate() < now && shouldBeActive) {
+      alert('포스팅 기간이 지나갔습니다. 기간을 수정하여 활성화하세요.')
+      setLoading(false)
+      return
+    }
+
     setLoading(true)
     
     try {
@@ -556,9 +594,25 @@ const SlideAddModal: React.FC<SlideAddModalProps> = ({ isOpen, onClose, onSucces
         updatedAt: Timestamp.now()
       }
 
+      console.log('저장할 데이터:', baseSlideData)
+      console.log('포스팅 기간 포함 여부:', {
+        postingStart: baseSlideData.postingStart,
+        postingEnd: baseSlideData.postingEnd
+      })
+
       if (isEditMode && editSlide?.id) {
         const slideRef = doc(db, 'slides', editSlide.id)
         await updateDoc(slideRef, baseSlideData)
+        
+        // 업데이트 후 확인
+        const updatedDoc = await getDoc(slideRef)
+        const updatedData = updatedDoc.data()
+        console.log('업데이트 후 DB 데이터:', updatedData)
+        console.log('업데이트 후 포스팅 기간:', {
+          postingStart: updatedData?.postingStart,
+          postingEnd: updatedData?.postingEnd
+        })
+        
         alert('슬라이드가 성공적으로 수정되었습니다!')
       } else {
         const slidesSnapshot = await getDocs(collection(db, 'slides'))
@@ -746,23 +800,55 @@ const SlideAddModal: React.FC<SlideAddModalProps> = ({ isOpen, onClose, onSucces
           <div className="slide-form-row-inline-label posting-period-row">
             <label htmlFor="postingStart">포스팅 기간</label>
             <div className="posting-period-inputs">
-              <input
-                type="date"
-                id="postingStart"
-                name="postingStart"
-                value={formData.postingStart}
-                onChange={handleInputChange}
-                required
-              />
+              <div className="date-input-wrapper">
+                <input
+                  type="date"
+                  id="postingStart"
+                  name="postingStart"
+                  value={formData.postingStart}
+                  onChange={handleInputChange}
+                  required
+                  className="posting-date-input"
+                  onFocus={(e) => {
+                    const input = e.target as HTMLInputElement
+                    // showPicker는 사용자 제스처가 필요하므로 onFocus에서는 호출하지 않음
+                  }}
+                />
+                <img 
+                  src={calendarIcon} 
+                  alt="캘린더" 
+                  className="calendar-icon"
+                  onClick={() => {
+                    const input = document.getElementById('postingStart') as HTMLInputElement
+                    input?.showPicker?.() || input?.click()
+                  }}
+                />
+              </div>
               <span className="posting-period-separator">~</span>
-              <input
-                type="date"
-                id="postingEnd"
-                name="postingEnd"
-                value={formData.postingEnd}
-                onChange={handleInputChange}
-                required
-              />
+              <div className="date-input-wrapper">
+                <input
+                  type="date"
+                  id="postingEnd"
+                  name="postingEnd"
+                  value={formData.postingEnd}
+                  onChange={handleInputChange}
+                  required
+                  className="posting-date-input"
+                  onFocus={(e) => {
+                    const input = e.target as HTMLInputElement
+                    // showPicker는 사용자 제스처가 필요하므로 onFocus에서는 호출하지 않음
+                  }}
+                />
+                <img 
+                  src={calendarIcon} 
+                  alt="캘린더" 
+                  className="calendar-icon"
+                  onClick={() => {
+                    const input = document.getElementById('postingEnd') as HTMLInputElement
+                    input?.showPicker?.() || input?.click()
+                  }}
+                />
+              </div>
             </div>
           </div>
 
@@ -796,7 +882,7 @@ const SlideAddModal: React.FC<SlideAddModalProps> = ({ isOpen, onClose, onSucces
                 }}
               />
             </div>
-            <label htmlFor="subtitleColor" style={{ minWidth: '100px', marginLeft: '12px' }}>부제목 색상</label>
+            <label htmlFor="subtitleColor" style={{ minWidth: '70px', marginLeft: '12px' }}>부제목 색상</label>
             <div className="color-picker-wrapper" style={{ flex: '0 0 auto' }}>
               <ColorPaletteMenu
                 currentColor={formData.subtitleColor}
@@ -854,7 +940,7 @@ const SlideAddModal: React.FC<SlideAddModalProps> = ({ isOpen, onClose, onSucces
                       onClick={openUploadWidget}
                       title="이미지 변경"
                     >
-                      ✏️
+                      <img src={changeImageIcon} alt="이미지 변경" style={{ width: '40px', height: '40px' }} />
                     </button>
                     <button 
                       type="button"
@@ -862,7 +948,7 @@ const SlideAddModal: React.FC<SlideAddModalProps> = ({ isOpen, onClose, onSucces
                       onClick={removeImage}
                       title="이미지 삭제"
                     >
-                      🗑️
+                      <img src={trashIcon64} alt="이미지 삭제" style={{ width: '40px', height: '40px' }} />
                     </button>
                   </div>
                 </>

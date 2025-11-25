@@ -16,10 +16,17 @@
 body.mobile-view-active {
   overflow-x: hidden;
   background-color: #2a2a2a !important;
+  touch-action: pan-y; /* 세로 스크롤만 허용 */
 }
 
 body.mobile-view-active html {
   background-color: #2a2a2a !important;
+}
+
+/* 모바일 뷰에서 슬라이드 영역은 가로 스크롤만 허용 */
+body.mobile-view-active .hero-carousel.card-slider {
+  touch-action: pan-x !important;
+  overscroll-behavior: contain !important;
 }
 
 /* 페이지 슬라이드 애니메이션 */
@@ -28,7 +35,12 @@ body.page-sliding-left {
   position: relative;
 }
 
-body.page-sliding-left .publishing-website {
+/* 모바일 뷰에서는 페이지 전환 애니메이션 비활성화 */
+body.mobile-view-active.page-sliding-left .publishing-website {
+  animation: none;
+}
+
+body.page-sliding-left:not(.mobile-view-active) .publishing-website {
   animation: slideOutLeft 0.3s ease-in-out forwards;
 }
 
@@ -37,7 +49,12 @@ body.page-sliding-right {
   position: relative;
 }
 
-body.page-sliding-right .book-detail-page {
+/* 모바일 뷰에서는 페이지 전환 애니메이션 비활성화 */
+body.mobile-view-active.page-sliding-right .book-detail-page {
+  animation: none;
+}
+
+body.page-sliding-right:not(.mobile-view-active) .book-detail-page {
   animation: slideOutRight 0.3s ease-in-out forwards;
 }
 
@@ -86,13 +103,24 @@ body.page-sliding-right .book-detail-page {
 }
 
 /* 도서 상세 페이지 진입 애니메이션 */
-.book-detail-page {
+/* 모바일 뷰에서는 페이지 전환 애니메이션 비활성화 */
+body.mobile-view-active .book-detail-page {
+  animation: none;
+}
+
+body:not(.mobile-view-active) .book-detail-page {
   animation: slideInLeft 0.3s ease-in-out;
 }
 
 /* 홈페이지로 돌아올 때 애니메이션 */
-body.page-sliding-right ~ * .publishing-website,
-body:not(.page-sliding-left):not(.page-sliding-right) .publishing-website {
+/* 모바일 뷰에서는 페이지 전환 애니메이션 비활성화 */
+body.mobile-view-active.page-sliding-right ~ * .publishing-website,
+body.mobile-view-active:not(.page-sliding-left):not(.page-sliding-right) .publishing-website {
+  animation: none;
+}
+
+body:not(.mobile-view-active).page-sliding-right ~ * .publishing-website,
+body:not(.mobile-view-active):not(.page-sliding-left):not(.page-sliding-right) .publishing-website {
   animation: slideInRight 0.3s ease-in-out;
 }
 
@@ -104,8 +132,10 @@ body.mobile-view-active html {
   background-color: #2a2a2a !important;
 }
 
-body.mobile-view-active .publishing-website.mobile-viewport {
-  max-width: 375px; /* 모바일 사이즈로 고정 */
+/* 웹에서 모바일 뷰 테스트 시: 375px 고정 컨테이너, 가운데 정렬 */
+body.mobile-view-active:not(.actual-mobile-device) .publishing-website.mobile-viewport,
+body.mobile-view-active:not(.actual-mobile-device) .mobile-viewport {
+  max-width: 375px; /* 웹 테스트용 고정 크기 */
   width: 375px;
   margin: 0 auto;
   box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
@@ -114,12 +144,47 @@ body.mobile-view-active .publishing-website.mobile-viewport {
   position: relative;
   min-height: 100vh;
   background-color: #2a2a2a !important; /* 모바일 뷰: 더 진한 회색 배경 */
-  transition: max-width 0.3s ease, width 0.3s ease;
+  /* 모바일 뷰포트 컨테이너 자체는 이동하지 않음 */
 }
 
-/* 모바일 뷰포트 모드 (기존 호환성 유지) */
-.publishing-website.mobile-viewport {
-  max-width: 375px; /* 모바일 사이즈로 고정 */
+/* 메뉴가 열릴 때 모바일 페이지 콘텐츠만 우측으로 밀기 (헤더 제외) */
+body.mobile-view-active:not(.actual-mobile-device).menu-open .mobile-content-wrapper {
+  transform: translateX(calc(375px * 2 / 3)); /* 메뉴 너비만큼 우측으로 이동 */
+  transition: transform 0.3s ease;
+}
+
+body.mobile-view-active:not(.actual-mobile-device) .mobile-content-wrapper {
+  transition: transform 0.3s ease;
+}
+
+/* 실제 모바일 기기: 기기별 화면 너비에 맞춤 */
+body.mobile-view-active.actual-mobile-device .publishing-website.mobile-viewport,
+body.mobile-view-active.actual-mobile-device .mobile-viewport {
+  max-width: 100vw; /* 실제 모바일 기기 화면 너비에 맞춤 */
+  width: 100%;
+  margin: 0 auto;
+  box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+  border-radius: 0;
+  overflow-x: hidden;
+  position: relative;
+  min-height: 100vh;
+  background-color: #2a2a2a !important; /* 모바일 뷰: 더 진한 회색 배경 */
+  /* 모바일 뷰포트 컨테이너 자체는 이동하지 않음 */
+}
+
+/* 메뉴가 열릴 때 모바일 페이지 콘텐츠만 우측으로 밀기 (헤더 제외) */
+body.mobile-view-active.actual-mobile-device.menu-open .mobile-content-wrapper {
+  transform: translateX(66.67vw); /* 메뉴 너비만큼 우측으로 이동 */
+  transition: transform 0.3s ease;
+}
+
+body.mobile-view-active.actual-mobile-device .mobile-content-wrapper {
+  transition: transform 0.3s ease;
+}
+
+/* 모바일 뷰포트 모드 (기존 호환성 유지 - 웹 테스트용) */
+.publishing-website.mobile-viewport:not(.actual-mobile-device) {
+  max-width: 375px; /* 웹 테스트용 고정 크기 */
   width: 375px;
   margin: 0 auto;
   box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
@@ -197,6 +262,15 @@ body.mobile-view-active .publishing-website.mobile-viewport {
   position: sticky;
   top: 0;
   z-index: 1000;
+}
+
+.mobile-viewport .main-header,
+body.mobile-view-active .main-header {
+  position: sticky;
+  top: 0;
+  z-index: 2000;
+  /* 헤더는 고정되어 이동하지 않음 */
+  transform: translateX(0) !important;
 }
 
 .header-content {
@@ -319,7 +393,7 @@ body.mobile-view-active .publishing-website.mobile-viewport {
 .hero-carousel {
   position: relative;
   margin: 20px 0 20px 0; /* 상단 20px, 하단 20px, 좌우 마진 0 */
-  padding: 0; /* 패딩 제거 */
+  padding: 0 0 0 20px; /* 왼쪽 패딩 20px */
   overflow-x: hidden; /* 가로 스크롤 숨김 */
   overflow-y: visible;
   max-width: 100%; /* 전체 너비 사용 */
@@ -327,7 +401,17 @@ body.mobile-view-active .publishing-website.mobile-viewport {
   display: flex;
   flex-direction: column;
   align-items: flex-start; /* 좌측 정렬로 변경 */
+  isolation: isolate;
 }
+
+
+/* 모바일 뷰 전용 스타일 */
+.mobile-viewport .hero-carousel {
+  overscroll-behavior: contain !important;
+  overscroll-behavior-x: contain !important;
+  overscroll-behavior-y: none !important;
+}
+
 
 /* 초기 로딩 중에는 완전히 숨김 */
 .hero-carousel[data-loading="true"] {
@@ -343,58 +427,77 @@ body.mobile-view-active .publishing-website.mobile-viewport {
   padding: 0; /* 패딩 제거 */
 }
 
+/* 웹 뷰: 일반 캐러셀 스타일 (Stacked Card 아님) */
+.publishing-website:not(.mobile-viewport) .carousel-container {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  position: relative;
+  width: 100%;
+  height: 300px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: none !important;
+  overscroll-behavior-x: none !important;
+  overscroll-behavior-y: none !important;
+  touch-action: pan-x !important;
+  isolation: isolate;
+  will-change: scroll-position;
+  pointer-events: auto;
+}
+
+/* 기본 캐러셀 컨테이너 (모바일용) */
 .carousel-container {
   display: flex;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;
   position: relative;
   width: 100%;
-  height: 260px;
-  perspective: 1000px;
+  height: 300px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
+}
+
+.carousel-container::-webkit-scrollbar {
+  display: none;
 }
 
 .carousel-slide {
-  width: 460px;
-  min-width: 460px;
-  height: 260px;
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  transform-origin: center center;
-  transition: transform 0.6s ease, opacity 0.6s ease, z-index 0s;
+  width: 540px;
+  min-width: 540px;
+  height: 300px;
+  position: relative;
+  flex-shrink: 0;
+  margin-right: 20px;
   cursor: pointer;
   border-radius: 12px;
   overflow: hidden;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
 }
 
-/* Stacked Card 효과 - 활성 카드 */
-.carousel-slide.active {
-  transform: translate(-50%, -50%) scale(1) translateX(0);
-  z-index: 3;
-  opacity: 1;
+.carousel-slide:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.4);
 }
 
-/* Stacked Card 효과 - 이전 카드 (왼쪽 뒤) */
-.carousel-slide.prev {
-  transform: translate(-50%, -50%) scale(0.85) translateX(-120px) rotateY(15deg);
-  z-index: 1;
-  opacity: 0.7;
-}
-
-/* Stacked Card 효과 - 다음 카드 (오른쪽 뒤) */
+/* 웹 뷰에서는 active, prev, next 클래스가 필요 없음 */
+.carousel-slide.active,
+.carousel-slide.prev,
 .carousel-slide.next {
-  transform: translate(-50%, -50%) scale(0.85) translateX(120px) rotateY(-15deg);
+  opacity: 1;
+  transform: none;
   z-index: 1;
-  opacity: 0.7;
 }
 
-/* 숨겨진 카드 */
 .carousel-slide:not(.active):not(.prev):not(.next) {
-  opacity: 0;
-  pointer-events: none;
-  z-index: 0;
-  transform: translate(-50%, -50%) scale(0.75) translateX(0);
+  opacity: 1;
+  pointer-events: auto;
+  transform: none;
 }
 
 .slide-content {
@@ -485,6 +588,8 @@ body.mobile-view-active .publishing-website.mobile-viewport {
   pointer-events: none;
   left: 0;
   right: 0;
+  z-index: 10;
+  isolation: isolate;
 }
 
 .carousel-prev {
@@ -898,9 +1003,14 @@ body.mobile-view-active .publishing-website.mobile-viewport {
   width: 100% !important;
   height: 240px !important;
   touch-action: pan-x !important;
+  overscroll-behavior: contain !important;
+  overscroll-behavior-x: contain !important;
+  overscroll-behavior-y: none !important;
+  -webkit-overflow-scrolling: touch !important;
   display: flex !important;
   align-items: center !important;
   justify-content: center !important;
+  isolation: isolate !important; /* 새로운 스택 컨텍스트 생성 */
 }
 
 .mobile-viewport .card-slider-container,
@@ -918,6 +1028,10 @@ body.mobile-view-active .publishing-website.mobile-viewport {
   padding: 0 !important;
   margin: 0 !important;
   overflow: visible !important;
+  touch-action: pan-x !important;
+  overscroll-behavior: contain !important;
+  overscroll-behavior-x: contain !important;
+  overscroll-behavior-y: none !important;
 }
 
 /* 메인 슬라이드 (중앙, 모바일 사이즈보다 조금 작게) - Stacked Card */
@@ -1694,5 +1808,216 @@ body.mobile-view-active .publishing-website.mobile-viewport {
   .main-header {
     position: -webkit-sticky;
     position: sticky;
+  }
+}
+
+/* 모바일 사이드바 메뉴 - 오버레이 */
+/* 웹에서 모바일 뷰 테스트 시: 375px 고정 */
+body.mobile-view-active:not(.actual-mobile-device) .mobile-menu-overlay {
+  position: fixed;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 375px; /* 웹 테스트용 고정 크기 */
+  max-width: 375px;
+  height: 100vh;
+  background-color: rgba(0, 0, 0, 0.5);
+  z-index: 1998;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease;
+}
+
+body.mobile-view-active:not(.actual-mobile-device).menu-open .mobile-menu-overlay {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* 실제 모바일 기기: 전체 화면 */
+body.mobile-view-active.actual-mobile-device .mobile-menu-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  width: 100vw; /* 실제 모바일 기기 화면 너비에 맞춤 */
+  max-width: 100vw;
+  height: 100vh;
+  background-color: rgba(0, 0, 0, 0.5);
+  z-index: 1998;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease;
+}
+
+body.mobile-view-active.actual-mobile-device.menu-open .mobile-menu-overlay {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.mobile-viewport .mobile-menu-overlay {
+  position: fixed;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 375px; /* 웹 테스트용 고정 크기 */
+  max-width: 375px;
+  height: 100vh;
+  background-color: rgba(0, 0, 0, 0.5);
+  z-index: 1998;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease;
+}
+
+.mobile-viewport.menu-open .mobile-menu-overlay {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* 모바일 사이드바 메뉴 - 사이드바 */
+.mobile-viewport .mobile-dropdown-menu {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 66.67vw; /* 화면의 약 2/3 너비 */
+  max-width: 66.67vw;
+  height: 100vh;
+  background-color: #1e1e1e; /* 모바일 배경(#2a2a2a)보다 약간 더 어두운 배경 */
+  z-index: 1999;
+  box-shadow: 2px 0 10px rgba(0, 0, 0, 0.5);
+  transform: translateX(-100%); /* 기본적으로 숨김 */
+  transition: transform 0.3s ease;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.mobile-viewport.menu-open .mobile-dropdown-menu {
+  transform: translateX(0); /* 메뉴 열릴 때 슬라이드 인 */
+}
+
+body.mobile-view-active .mobile-dropdown-menu {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 66.67vw; /* 화면의 약 2/3 너비 */
+  max-width: 66.67vw;
+  height: 100vh;
+  background-color: #1e1e1e; /* 모바일 배경(#2a2a2a)보다 약간 더 어두운 배경 */
+  z-index: 1999;
+  box-shadow: 2px 0 10px rgba(0, 0, 0, 0.5);
+  transform: translateX(-100%); /* 기본적으로 숨김 */
+  transition: transform 0.3s ease;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+body.mobile-view-active.menu-open .mobile-dropdown-menu {
+  transform: translateX(0); /* 메뉴 열릴 때 슬라이드 인 */
+}
+
+/* 웹 테스트 시 사이드바 위치 조정 */
+body.mobile-view-active:not(.actual-mobile-device) .mobile-dropdown-menu {
+  left: calc(50% - 187.5px); /* 375px / 2 = 187.5px */
+  width: calc(375px * 2 / 3); /* 웹 테스트 시 375px의 2/3 */
+  max-width: calc(375px * 2 / 3);
+}
+
+body.mobile-view-active:not(.actual-mobile-device).menu-open .mobile-dropdown-menu {
+  left: calc(50% - 187.5px);
+  transform: translateX(0);
+}
+
+.mobile-menu-items {
+  padding: 20px 0;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.mobile-menu-item {
+  width: 100%;
+  padding: 16px 24px;
+  background: none;
+  border: none;
+  text-align: left;
+  font-size: 16px;
+  color: #ffffff;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  text-decoration: none;
+  display: block;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.mobile-menu-item:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.mobile-menu-item:last-child {
+  border-bottom: none;
+}
+
+.mobile-menu-user-info {
+  padding: 20px 24px;
+  font-size: 16px;
+  font-weight: 600;
+  color: #ffffff;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+  margin-bottom: 8px;
+  background-color: rgba(255, 255, 255, 0.05);
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideInFromLeft {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+@keyframes slideInFromLeftMobile {
+  from {
+    transform: translateX(calc(-50% - 100%));
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+body.mobile-view-active .mobile-dropdown-menu {
+  animation: slideDownMobile 0.3s ease-in-out;
+}
+
+@keyframes slideDownMobile {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
   }
 }

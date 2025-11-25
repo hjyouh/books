@@ -63,10 +63,15 @@ const BookDetailPage: React.FC = () => {
 
       try {
         setLoading(true)
-        // 슬라이드 애니메이션 클래스 제거
-        setTimeout(() => {
+        // 모바일에서는 슬라이드 애니메이션 클래스 제거 (즉시)
+        const isMobile = window.innerWidth <= 768
+        if (!isMobile) {
+          setTimeout(() => {
+            document.body.classList.remove('page-sliding-left', 'page-sliding-right')
+          }, 350)
+        } else {
           document.body.classList.remove('page-sliding-left', 'page-sliding-right')
-        }, 350)
+        }
         
         const bookDoc = await getDoc(doc(db, 'books', bookId))
         if (bookDoc.exists()) {
@@ -138,24 +143,22 @@ const BookDetailPage: React.FC = () => {
       {/* 헤더 */}
       <header className="book-detail-header">
         <button className="back-button" onClick={() => {
-          // 슬라이드 애니메이션을 위해 body에 클래스 추가
-          document.body.classList.add('page-sliding-right')
-          setTimeout(() => {
-            // 애니메이션 클래스 제거
+          // 모바일에서는 페이지 전환 애니메이션 없이 바로 이동
+          const isMobile = window.innerWidth <= 768
+          if (!isMobile) {
+            // 웹에서는 슬라이드 애니메이션 사용
+            document.body.classList.add('page-sliding-right')
             setTimeout(() => {
-              document.body.classList.remove('page-sliding-right')
-            }, 350)
-            // 모바일 뷰 상태를 유지하면서 홈으로 이동
-            const savedMobileView = localStorage.getItem('isMobileView')
-            if (savedMobileView === 'true') {
-              // 모바일 뷰 상태를 명시적으로 복원하기 위해 이벤트 발생
-              window.dispatchEvent(new Event('restoreMobileView'))
-              // 모바일 뷰 상태를 유지하기 위해 홈으로 직접 이동
-              navigate('/', { replace: false })
-            } else {
+              setTimeout(() => {
+                document.body.classList.remove('page-sliding-right')
+              }, 350)
               navigate(-1)
-            }
-          }, 50)
+            }, 50)
+          } else {
+            // 모바일에서는 바로 이동
+            document.body.classList.remove('page-sliding-right')
+            navigate('/')
+          }
         }}>
           ←
         </button>

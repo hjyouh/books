@@ -23,6 +23,24 @@
   <body style="background: #4a4a4a; margin: 0; padding: 0;">
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
+    <script>
+      // WebSocket 오류 무시
+      window.addEventListener('error', function(e) {
+        if (e.message && e.message.includes('WebSocket')) {
+          e.preventDefault();
+          return false;
+        }
+      });
+      
+      // WebSocket 연결 실패 시 무시
+      const originalConsoleError = console.error;
+      console.error = function(...args) {
+        if (args[0] && typeof args[0] === 'string' && args[0].includes('WebSocket')) {
+          return; // WebSocket 오류는 무시
+        }
+        originalConsoleError.apply(console, args);
+      };
+    </script>
   </body>
 </html>
 
