@@ -148,6 +148,7 @@ const MobileBookDetailPage: React.FC = () => {
       {/* 헤더 */}
       <MobileHeader 
         title={book.title}
+        titleFontSize={16}
         onBack={() => {
           const isMobile = window.innerWidth <= 768
           if (!isMobile) {
