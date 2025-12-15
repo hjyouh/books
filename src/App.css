@@ -690,9 +690,9 @@ body.mobile-view-active .main-header {
 }
 
 .section-header h2 {
-  font-size: 24px;
+  font-size: 14px;
   font-weight: 700;
-  color: #1f2937;
+  color: #ff9900;
   margin: 0;
 }
 
@@ -1330,8 +1330,8 @@ body.mobile-view-active .main-header {
 }
 
 .mobile-viewport .section-header h2 {
-  color: #ffffff !important;
-  font-size: 18px !important;
+  color: #ff9900 !important;
+  font-size: 14px !important;
   font-weight: 700 !important;
   margin: 0 !important;
   padding-bottom: 0 !important;
@@ -1587,9 +1587,9 @@ body.mobile-view-active .main-header {
 }
 
 .mobile-viewport .section-header h2 {
-  font-size: 20px;
+  font-size: 14px;
   font-weight: 700;
-  color: #ffffff;
+  color: #ff9900;
   margin: 0;
 }
 
@@ -1848,7 +1848,7 @@ body.mobile-view-active .main-header {
   }
 
   .section-header h2 {
-    font-size: 20px;
+    font-size: 14px;
   }
 
   .more-link {
