@@ -71,6 +71,8 @@ const BookAddModal: React.FC<BookAddModalProps> = ({ isOpen, onClose, onSuccess,
   ]
   const [selectedFont, setSelectedFont] = useState<string>(fontFamilies[0])
   const [selectedFontSize, setSelectedFontSize] = useState<string>(fontSizes[2].cmd)
+  const [showToolbar, setShowToolbar] = useState<boolean>(false)
+  const toolbarRef = React.useRef<HTMLDivElement | null>(null)
   
   const isEditMode = !!editBook
 
@@ -168,34 +170,6 @@ const BookAddModal: React.FC<BookAddModalProps> = ({ isOpen, onClose, onSuccess,
     alert(error)
   }, [])
 
-  // 모달이 닫힐 때 위젯 정리
-  React.useEffect(() => {
-    if (!isOpen) {
-      // 모달이 닫힐 때 위젯 정리
-      if (widgetRef.current && typeof widgetRef.current.destroy === 'function') {
-        try {
-          widgetRef.current.destroy()
-        } catch (error) {
-          // 무시 (이미 정리되었을 수 있음)
-        }
-        widgetRef.current = null
-      }
-      // 타이머 정리
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current)
-        intervalRef.current = null
-      }
-      if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current)
-        timeoutRef.current = null
-      }
-      if (initTimeoutRef.current) {
-        clearTimeout(initTimeoutRef.current)
-        initTimeoutRef.current = null
-      }
-    }
-  }, [isOpen])
-
   // 위젯 초기화 함수 (필요할 때만 호출)
   const initWidget = React.useCallback(() => {
     // 모달이 닫혔으면 중단
@@ -213,20 +187,33 @@ const BookAddModal: React.FC<BookAddModalProps> = ({ isOpen, onClose, onSuccess,
       return
     }
 
-    // 환경 변수 확인
+    // 환경 변수 확인 및 사용
     const cloudName = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME
     const uploadPreset = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET
     
+    // 환경 변수 디버깅 (개발 환경에서만)
+    if (import.meta.env.DEV) {
+      console.log('Cloudinary 환경 변수 확인:', {
+        cloudName: cloudName ? '설정됨' : '미설정',
+        uploadPreset: uploadPreset ? '설정됨' : '미설정'
+      })
+    }
+    
     if (!cloudName || !uploadPreset) {
-      console.warn('Cloudinary 환경 변수가 설정되지 않았습니다.')
+      console.error('Cloudinary 환경 변수가 설정되지 않았습니다.', {
+        VITE_CLOUDINARY_CLOUD_NAME: cloudName || 'undefined',
+        VITE_CLOUDINARY_UPLOAD_PRESET: uploadPreset || 'undefined'
+      })
+      alert('Cloudinary 설정이 완료되지 않았습니다. 환경 변수를 확인해주세요.')
       return
     }
 
     try {
+      // Cloudinary 위젯 생성 시 환경 변수 사용
       const widget = cloudinary.createUploadWidget(
         {
-          cloudName: cloudName,
-          uploadPreset: uploadPreset,
+          cloudName: cloudName, // VITE_CLOUDINARY_CLOUD_NAME 환경 변수 사용
+          uploadPreset: uploadPreset, // VITE_CLOUDINARY_UPLOAD_PRESET 환경 변수 사용
           cropping: true,
           croppingAspectRatio: 0.75, // 3:4 비율 (3/4 = 0.75)
           maxFiles: 1, // 1장만 업로드 가능
@@ -255,8 +242,81 @@ const BookAddModal: React.FC<BookAddModalProps> = ({ isOpen, onClose, onSuccess,
     }
   }, [isOpen, handleCloudinaryUpload, handleCloudinaryError])
 
+  // 모달이 열릴 때 Cloudinary 스크립트 로드 및 위젯 초기화
+  React.useEffect(() => {
+    if (!isOpen) {
+      // 모달이 닫힐 때 위젯 정리
+      if (widgetRef.current && typeof widgetRef.current.destroy === 'function') {
+        try {
+          widgetRef.current.destroy()
+        } catch (error) {
+          // 무시 (이미 정리되었을 수 있음)
+        }
+        widgetRef.current = null
+      }
+      // 타이머 정리
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current)
+        intervalRef.current = null
+      }
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current)
+        timeoutRef.current = null
+      }
+      if (initTimeoutRef.current) {
+        clearTimeout(initTimeoutRef.current)
+        initTimeoutRef.current = null
+      }
+      return
+    }
+
+    // 모달이 열릴 때 Cloudinary 스크립트 확인 및 로드
+    const loadCloudinaryScript = () => {
+      const existingScript = document.querySelector('script[src*="cloudinary"]')
+      if (existingScript) {
+        // 스크립트가 이미 있으면 위젯 초기화 시도
+        const checkCloudinary = setInterval(() => {
+          const cloudinary = (window as any).cloudinary
+          if (cloudinary && typeof cloudinary.createUploadWidget === 'function') {
+            clearInterval(checkCloudinary)
+            initWidget()
+          }
+        }, 100)
+        
+        timeoutRef.current = setTimeout(() => {
+          clearInterval(checkCloudinary)
+        }, 5000) as any
+      } else {
+        // 스크립트가 없으면 로드
+        const script = document.createElement('script')
+        script.src = 'https://upload-widget.cloudinary.com/global/all.js'
+        script.async = true
+        script.onload = () => {
+          console.log('Cloudinary 스크립트 로드 완료')
+          setTimeout(() => {
+            initWidget()
+          }, 500)
+        }
+        script.onerror = () => {
+          console.error('Cloudinary 스크립트 로드 실패')
+        }
+        document.head.appendChild(script)
+      }
+    }
+
+    // 모달이 열릴 때 위젯 초기화 시도
+    const cloudinary = (window as any).cloudinary
+    if (cloudinary && typeof cloudinary.createUploadWidget === 'function') {
+      // 이미 로드되어 있으면 바로 초기화
+      initWidget()
+    } else {
+      // 로드되지 않았으면 스크립트 로드
+      loadCloudinaryScript()
+    }
+  }, [isOpen, initWidget])
+
   const openUploadWidget = () => {
-    // 위젯이 있고 open 메서드가 있으면 열기
+    // 위젯이 이미 초기화되어 있으면 바로 열기
     if (widgetRef.current && typeof widgetRef.current.open === 'function') {
       try {
         widgetRef.current.open()
@@ -268,7 +328,7 @@ const BookAddModal: React.FC<BookAddModalProps> = ({ isOpen, onClose, onSuccess,
       }
     }
     
-    // 위젯이 없으면 초기화 시도
+    // 위젯이 없으면 초기화 시도 후 열기
     const cloudinary = (window as any).cloudinary
     
     if (cloudinary && typeof cloudinary.createUploadWidget === 'function') {
@@ -281,67 +341,15 @@ const BookAddModal: React.FC<BookAddModalProps> = ({ isOpen, onClose, onSuccess,
             widgetRef.current.open()
           } catch (error) {
             console.error('위젯 열기 오류:', error)
+            alert('이미지 업로드 위젯을 열 수 없습니다. 잠시 후 다시 시도해주세요.')
           }
+        } else {
+          alert('이미지 업로드 위젯을 초기화할 수 없습니다. 잠시 후 다시 시도해주세요.')
         }
-      }, 200)
-      return
-    }
-    
-    // Cloudinary가 로드되지 않았으면 스크립트 로드 시도
-    console.log('Cloudinary 스크립트 로드 중...')
-    
-    // 이미 스크립트가 로드 중이거나 로드되어 있는지 확인
-    const existingScript = document.querySelector('script[src*="cloudinary"]')
-    if (existingScript) {
-      // 스크립트가 있으면 로드를 기다림
-      const checkCloudinary = setInterval(() => {
-        const cloudinary = (window as any).cloudinary
-        if (cloudinary && typeof cloudinary.createUploadWidget === 'function') {
-          clearInterval(checkCloudinary)
-          initWidget()
-          setTimeout(() => {
-            if (widgetRef.current && typeof widgetRef.current.open === 'function') {
-              try {
-                widgetRef.current.open()
-              } catch (error) {
-                console.error('위젯 열기 오류:', error)
-              }
-            }
-          }, 200)
-        }
-      }, 100)
-      
-      setTimeout(() => {
-        clearInterval(checkCloudinary)
-      }, 5000)
+      }, 300)
     } else {
-      // 스크립트가 없으면 새로 로드
-      const script = document.createElement('script')
-      script.src = 'https://upload-widget.cloudinary.com/global/all.js'
-      script.async = true
-      script.onload = () => {
-        console.log('Cloudinary 스크립트 로드 완료')
-        setTimeout(() => {
-          const cloudinary = (window as any).cloudinary
-          if (cloudinary && typeof cloudinary.createUploadWidget === 'function') {
-            initWidget()
-            setTimeout(() => {
-              if (widgetRef.current && typeof widgetRef.current.open === 'function') {
-                try {
-                  widgetRef.current.open()
-                } catch (error) {
-                  console.error('위젯 열기 오류:', error)
-                }
-              }
-            }, 200)
-          }
-        }, 500)
-      }
-      script.onerror = () => {
-        console.error('Cloudinary 스크립트 로드 실패')
-        alert('이미지 업로드 서비스를 불러올 수 없습니다. 페이지를 새로고침해주세요.')
-      }
-      document.head.appendChild(script)
+      // Cloudinary가 아직 로드되지 않았으면 사용자에게 알림
+      alert('이미지 업로드 서비스를 불러오는 중입니다. 잠시 후 다시 시도해주세요.')
     }
   }
 
@@ -391,6 +399,64 @@ const BookAddModal: React.FC<BookAddModalProps> = ({ isOpen, onClose, onSuccess,
       })
     }
   }
+
+  // 텍스트 선택 감지
+  useEffect(() => {
+    if (!isOpen) return
+
+    const handleSelectionChange = () => {
+      const selection = window.getSelection()
+      if (!selection || selection.rangeCount === 0 || !editorRef.current) {
+        setShowToolbar(false)
+        return
+      }
+
+      const range = selection.getRangeAt(0)
+      const isInsideEditor = editorRef.current.contains(range.commonAncestorContainer) ||
+                            editorRef.current === range.commonAncestorContainer ||
+                            (range.commonAncestorContainer.nodeType === Node.TEXT_NODE && 
+                             editorRef.current.contains(range.commonAncestorContainer.parentElement))
+
+      if (isInsideEditor && !range.collapsed && range.toString().trim().length > 0) {
+        // 텍스트가 선택된 경우
+        setShowToolbar(true)
+        
+        // 툴바 위치 업데이트
+        requestAnimationFrame(() => {
+          if (toolbarRef.current && editorRef.current) {
+            const rect = range.getBoundingClientRect()
+            const containerRect = editorRef.current.parentElement?.getBoundingClientRect()
+            
+            if (containerRect) {
+              const top = rect.top - containerRect.top - 50
+              const left = rect.left - containerRect.left
+              
+              toolbarRef.current.style.top = `${Math.max(0, top)}px`
+              toolbarRef.current.style.left = `${Math.max(0, left)}px`
+            }
+          }
+        })
+      } else {
+        setShowToolbar(false)
+      }
+    }
+
+    const handleMouseUp = () => {
+      setTimeout(handleSelectionChange, 10)
+    }
+
+    document.addEventListener('selectionchange', handleSelectionChange)
+    if (editorRef.current) {
+      editorRef.current.addEventListener('mouseup', handleMouseUp)
+    }
+
+    return () => {
+      document.removeEventListener('selectionchange', handleSelectionChange)
+      if (editorRef.current) {
+        editorRef.current.removeEventListener('mouseup', handleMouseUp)
+      }
+    }
+  }, [isOpen])
 
   const execEditorCommand = (command: string, value?: string) => {
     editorRef.current?.focus()
@@ -744,10 +810,11 @@ const BookAddModal: React.FC<BookAddModalProps> = ({ isOpen, onClose, onSuccess,
               </div>
 
               <div className="form-row posting-row">
-                <label>포스팅 기간</label>
+                <label htmlFor="postingStart">포스팅 기간</label>
                 <div className="posting-period-fields">
                   <input
                     type="date"
+                    id="postingStart"
                     name="postingStart"
                     value={formData.postingStart}
                     onChange={handleInputChange}
@@ -757,6 +824,7 @@ const BookAddModal: React.FC<BookAddModalProps> = ({ isOpen, onClose, onSuccess,
                   <span className="posting-separator">~</span>
                   <input
                     type="date"
+                    id="postingEnd"
                     name="postingEnd"
                     value={formData.postingEnd}
                     onChange={handleInputChange}
@@ -792,82 +860,84 @@ const BookAddModal: React.FC<BookAddModalProps> = ({ isOpen, onClose, onSuccess,
                       ×
                     </button>
                   )}
-                  <div className="editor-toolbar">
-                    <button type="button" onClick={() => execEditorCommand('bold')} title="굵게(B)">
-                      B
-                    </button>
-                    <button type="button" onClick={() => execEditorCommand('italic')} title="기울임(I)">
-                      I
-                    </button>
-                    <button type="button" onClick={() => execEditorCommand('underline')} title="밑줄(U)">
-                      U
-                    </button>
-                    <div className="editor-select">
-                      <select value={selectedFont} onChange={(e) => handleFontChange(e.target.value)} title="글꼴">
-                        {fontFamilies.map(font => (
-                          <option key={font} value={font}>{font}</option>
-                        ))}
-                      </select>
+                  {showToolbar && (
+                    <div className="editor-toolbar floating" ref={toolbarRef}>
+                      <button type="button" onClick={() => execEditorCommand('bold')} title="굵게(B)">
+                        B
+                      </button>
+                      <button type="button" onClick={() => execEditorCommand('italic')} title="기울임(I)">
+                        I
+                      </button>
+                      <button type="button" onClick={() => execEditorCommand('underline')} title="밑줄(U)">
+                        U
+                      </button>
+                      <div className="editor-select">
+                        <select value={selectedFont} onChange={(e) => handleFontChange(e.target.value)} title="글꼴">
+                          {fontFamilies.map(font => (
+                            <option key={font} value={font}>{font}</option>
+                          ))}
+                        </select>
+                      </div>
+                      <div className="editor-select">
+                        <select value={selectedFontSize} onChange={(e) => handleFontSizeChange(e.target.value)} title="글자 크기">
+                          {fontSizes.map(size => (
+                            <option key={size.cmd} value={size.cmd}>{size.label}</option>
+                          ))}
+                        </select>
+                      </div>
+                      <label className="editor-color-picker" title="글자 색상">
+                        <input
+                          type="color"
+                          onChange={(e) => execEditorCommand('foreColor', e.target.value)}
+                        />
+                        A
+                      </label>
+                      <label className="editor-color-picker" title="배경 색상">
+                        <input
+                          type="color"
+                          onChange={(e) => handleHighlight(e.target.value)}
+                        />
+                        ■
+                      </label>
+                      <div className="editor-divider" />
+                      <button type="button" onClick={() => execEditorCommand('justifyLeft')} title="왼쪽 정렬">
+                        L
+                      </button>
+                      <button type="button" onClick={() => execEditorCommand('justifyCenter')} title="가운데 정렬">
+                        C
+                      </button>
+                      <button type="button" onClick={() => execEditorCommand('justifyRight')} title="오른쪽 정렬">
+                        R
+                      </button>
+                      <div className="editor-divider" />
+                      <button type="button" onClick={() => execEditorCommand('insertUnorderedList')} title="불릿 목록">
+                        ••
+                      </button>
+                      <button type="button" onClick={() => execEditorCommand('insertOrderedList')} title="번호 목록">
+                        1.
+                      </button>
+                      <button type="button" onClick={() => execEditorCommand('outdent')} title="내어쓰기">
+                        ⇤
+                      </button>
+                      <button type="button" onClick={() => execEditorCommand('indent')} title="들여쓰기">
+                        ⇥
+                      </button>
+                      <div className="editor-divider" />
+                      <button type="button" onClick={() => execEditorCommand('formatBlock', '<blockquote>')} title="인용">
+                        ❝
+                      </button>
+                      <button type="button" onClick={() => execEditorCommand('formatBlock', '<h4>')} title="소제목">
+                        H4
+                      </button>
+                      <div className="editor-divider" />
+                      <button type="button" onClick={handleInsertLink} title="링크">
+                        🔗
+                      </button>
+                      <button type="button" onClick={handleInsertImage} title="이미지">
+                        🖼
+                      </button>
                     </div>
-                    <div className="editor-select">
-                      <select value={selectedFontSize} onChange={(e) => handleFontSizeChange(e.target.value)} title="글자 크기">
-                        {fontSizes.map(size => (
-                          <option key={size.cmd} value={size.cmd}>{size.label}</option>
-                        ))}
-                      </select>
-                    </div>
-                    <label className="editor-color-picker" title="글자 색상">
-                      <input
-                        type="color"
-                        onChange={(e) => execEditorCommand('foreColor', e.target.value)}
-                      />
-                      A
-                    </label>
-                    <label className="editor-color-picker" title="배경 색상">
-                      <input
-                        type="color"
-                        onChange={(e) => handleHighlight(e.target.value)}
-                      />
-                      ■
-                    </label>
-                    <div className="editor-divider" />
-                    <button type="button" onClick={() => execEditorCommand('justifyLeft')} title="왼쪽 정렬">
-                      L
-                    </button>
-                    <button type="button" onClick={() => execEditorCommand('justifyCenter')} title="가운데 정렬">
-                      C
-                    </button>
-                    <button type="button" onClick={() => execEditorCommand('justifyRight')} title="오른쪽 정렬">
-                      R
-                    </button>
-                    <div className="editor-divider" />
-                    <button type="button" onClick={() => execEditorCommand('insertUnorderedList')} title="불릿 목록">
-                      ••
-                    </button>
-                    <button type="button" onClick={() => execEditorCommand('insertOrderedList')} title="번호 목록">
-                      1.
-                    </button>
-                    <button type="button" onClick={() => execEditorCommand('outdent')} title="내어쓰기">
-                      ⇤
-                    </button>
-                    <button type="button" onClick={() => execEditorCommand('indent')} title="들여쓰기">
-                      ⇥
-                    </button>
-                    <div className="editor-divider" />
-                    <button type="button" onClick={() => execEditorCommand('formatBlock', '<blockquote>')} title="인용">
-                      ❝
-                    </button>
-                    <button type="button" onClick={() => execEditorCommand('formatBlock', '<h4>')} title="소제목">
-                      H4
-                    </button>
-                    <div className="editor-divider" />
-                    <button type="button" onClick={handleInsertLink} title="링크">
-                      🔗
-                    </button>
-                    <button type="button" onClick={handleInsertImage} title="이미지">
-                      🖼
-                    </button>
-                  </div>
+                  )}
                   <div
                     id="description"
                     ref={editorRef}

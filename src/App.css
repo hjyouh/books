@@ -215,6 +215,9 @@ body.mobile-view-active.actual-mobile-device .mobile-content-wrapper {
 .mobile-viewport .main-header {
   background: #2a2a2a;
   box-shadow: none;
+  position: sticky; /* 헤더 고정 */
+  top: 0;
+  z-index: 1001;
 }
 
 .mobile-viewport .header-content {
@@ -392,7 +395,7 @@ body.mobile-view-active .main-header {
 /* 메인 캐러셀 */
 .hero-carousel {
   position: relative;
-  margin: 20px 0 20px 0; /* 상단 20px, 하단 20px, 좌우 마진 0 */
+  margin: 0 0 20px 0; /* 상단 마진 제거, 하단 20px, 좌우 마진 0 */
   padding: 0 0 0 20px; /* 왼쪽 패딩 20px */
   overflow-x: hidden; /* 가로 스크롤 숨김 */
   overflow-y: visible;
@@ -687,7 +690,7 @@ body.mobile-view-active .main-header {
 }
 
 .section-header h2 {
-  font-size: 28px;
+  font-size: 24px;
   font-weight: 700;
   color: #1f2937;
   margin: 0;
@@ -710,6 +713,73 @@ body.mobile-view-active .main-header {
   position: relative;
 }
 
+/* 도서 섹션 화살표 스타일 - 슬라이드처럼 불투명한 원 배경 */
+.books-carousel .carousel-arrows {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 15px; /* 좌우 패딩 15px */
+  pointer-events: none;
+  left: 0;
+  right: 0;
+  z-index: 10;
+}
+
+.books-carousel .arrow-left,
+.books-carousel .arrow-right {
+  background: rgba(0, 0, 0, 0.5);
+  border: none;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  pointer-events: all;
+  transition: all 0.2s ease;
+  padding: 0;
+}
+
+.books-carousel .arrow-left:hover,
+.books-carousel .arrow-right:hover {
+  background: rgba(0, 0, 0, 0.7);
+  transform: scale(1.1);
+}
+
+.books-carousel .arrow-left {
+  left: 10px;
+  position: absolute;
+}
+
+.books-carousel .arrow-right {
+  right: 10px; /* 우측 화살표를 우측으로 이동 */
+  position: absolute;
+  left: auto;
+}
+
+/* 모바일 뷰에서 우측 화살표 위치 조정 */
+.mobile-viewport .books-carousel .arrow-right {
+  right: 10px !important; /* 모바일에서 우측 화살표를 우측으로 이동 */
+  left: auto !important;
+}
+
+.mobile-viewport .books-carousel .arrow-left {
+  left: 10px !important;
+  right: auto !important;
+}
+
+.books-carousel .arrow-left img,
+.books-carousel .arrow-right img {
+  width: 24px;
+  height: 24px;
+  filter: brightness(0) invert(1); /* 아이콘을 흰색으로 */
+}
+
 .mobile-viewport .books-carousel {
   display: flex !important;
   flex-direction: column !important;
@@ -726,7 +796,7 @@ body.mobile-view-active .main-header {
 
 .books-container {
   display: flex;
-  gap: 20px;
+  gap: 30px;
   overflow-x: auto;
   scroll-behavior: smooth;
   padding: 5px 0; /* 패딩 축소: 10px → 5px */
@@ -741,14 +811,16 @@ body.mobile-view-active .main-header {
 .book-card {
   width: 270px;
   min-width: 270px;
+  padding: 15px 10px;
   background: white;
   border-radius: 12px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-  overflow: hidden;
+  overflow: visible;
   transition: transform 0.2s, box-shadow 0.2s;
   cursor: pointer;
-  position: relative; /* 각 카드가 독립적으로 위치하도록 */
-  isolation: isolate; /* 각 카드의 stacking context 분리 */
+  position: relative;
+  isolation: isolate;
+  box-sizing: border-box;
 }
 
 .book-card:hover {
@@ -758,13 +830,14 @@ body.mobile-view-active .main-header {
 
 .book-cover {
   width: 100%;
-  height: 360px; /* 1.5배 증가: 240px → 360px */
+  height: 330px;
   background: #f3f4f6;
   display: flex;
   align-items: center;
   justify-content: center;
   overflow: hidden;
-  position: relative; /* 텍스트 오버레이를 위한 position */
+  position: relative;
+  border-radius: 8px;
 }
 
 .book-cover img {
@@ -919,7 +992,7 @@ body.mobile-view-active .main-header {
 /* 카드 슬라이드 스타일 (모바일 전용) */
 @media (max-width: 768px) {
   .card-slider {
-    margin: 20px 0 !important;
+    margin: 0 0 20px 0 !important; /* 상단 마진 제거 */
     padding: 0 20px !important;
     overflow: visible !important;
     position: relative !important;
@@ -994,9 +1067,10 @@ body.mobile-view-active .main-header {
 }
 
 /* 모바일 뷰포트에서도 모바일 스타일 적용 */
-.mobile-viewport .card-slider,
-.mobile-viewport .hero-carousel.card-slider {
-  margin: 20px 0 !important;
+/* Bootstrap Carousel을 사용하는 경우는 제외 */
+.mobile-viewport .card-slider:not(:has(.mobile-main-carousel)),
+.mobile-viewport .hero-carousel.card-slider:not(:has(.mobile-main-carousel)) {
+  margin: 0 0 20px 0 !important; /* 상단 마진 제거 */
   padding: 0 20px !important; /* 좌우 슬라이드가 보이도록 패딩 추가 */
   overflow: visible !important;
   position: relative !important;
@@ -1011,6 +1085,16 @@ body.mobile-view-active .main-header {
   align-items: center !important;
   justify-content: center !important;
   isolation: isolate !important; /* 새로운 스택 컨텍스트 생성 */
+}
+
+/* Bootstrap Carousel을 사용하는 경우 스타일 제외 */
+.mobile-viewport .hero-carousel.card-slider:has(.mobile-main-carousel) {
+  margin: 20px 0 20px 0 !important; /* 상단 마진 20px 추가 */
+  padding: 0 !important;
+  overflow: visible !important;
+  position: relative !important;
+  height: 240px !important; /* 슬라이드 전체 영역 높이 240px */
+  width: 100% !important;
 }
 
 .mobile-viewport .card-slider-container,
@@ -1035,10 +1119,11 @@ body.mobile-view-active .main-header {
 }
 
 /* 메인 슬라이드 (중앙, 모바일 사이즈보다 조금 작게) - Stacked Card */
-.mobile-viewport .hero-carousel .card-slide,
-.mobile-viewport .hero-carousel .carousel-slide,
-.mobile-viewport .card-slider .card-slide,
-.mobile-viewport .card-slider .carousel-slide {
+/* Bootstrap Carousel을 사용하는 경우는 제외 */
+.mobile-viewport .hero-carousel:not(:has(.mobile-main-carousel)) .card-slide,
+.mobile-viewport .hero-carousel:not(:has(.mobile-main-carousel)) .carousel-slide,
+.mobile-viewport .card-slider:not(:has(.mobile-main-carousel)) .card-slide,
+.mobile-viewport .card-slider:not(:has(.mobile-main-carousel)) .carousel-slide {
   width: 260px !important;
   min-width: 260px !important;
   max-width: 260px !important;
@@ -1055,29 +1140,29 @@ body.mobile-view-active .main-header {
   cursor: pointer !important;
 }
 
-.mobile-viewport .hero-carousel .carousel-slide.active,
-.mobile-viewport .card-slider .carousel-slide.active {
+.mobile-viewport .hero-carousel:not(:has(.mobile-main-carousel)) .carousel-slide.active,
+.mobile-viewport .card-slider:not(:has(.mobile-main-carousel)) .carousel-slide.active {
   transform: translate(-50%, -50%) scale(1) translateX(0) !important;
   z-index: 3 !important;
   opacity: 1 !important;
 }
 
-.mobile-viewport .hero-carousel .carousel-slide.prev,
-.mobile-viewport .card-slider .carousel-slide.prev {
+.mobile-viewport .hero-carousel:not(:has(.mobile-main-carousel)) .carousel-slide.prev,
+.mobile-viewport .card-slider:not(:has(.mobile-main-carousel)) .carousel-slide.prev {
   transform: translate(-50%, -50%) scale(0.85) translateX(-80px) rotateY(15deg) !important;
   z-index: 1 !important;
   opacity: 0.7 !important;
 }
 
-.mobile-viewport .hero-carousel .carousel-slide.next,
-.mobile-viewport .card-slider .carousel-slide.next {
+.mobile-viewport .hero-carousel:not(:has(.mobile-main-carousel)) .carousel-slide.next,
+.mobile-viewport .card-slider:not(:has(.mobile-main-carousel)) .carousel-slide.next {
   transform: translate(-50%, -50%) scale(0.85) translateX(80px) rotateY(-15deg) !important;
   z-index: 1 !important;
   opacity: 0.7 !important;
 }
 
-.mobile-viewport .hero-carousel .carousel-slide:not(.active):not(.prev):not(.next),
-.mobile-viewport .card-slider .carousel-slide:not(.active):not(.prev):not(.next) {
+.mobile-viewport .hero-carousel:not(:has(.mobile-main-carousel)) .carousel-slide:not(.active):not(.prev):not(.next),
+.mobile-viewport .card-slider:not(:has(.mobile-main-carousel)) .carousel-slide:not(.active):not(.prev):not(.next) {
   opacity: 0 !important;
   pointer-events: none !important;
   z-index: 0 !important;
@@ -1182,7 +1267,12 @@ body.mobile-view-active .main-header {
   justify-content: space-between;
   align-items: center;
   padding: 0 16px;
-  height: 60px;
+  height: 60px; /* 상단 제목 높이 60px */
+  position: sticky; /* 상단 고정 */
+  top: 0;
+  z-index: 1000;
+  background: #2a2a2a; /* 배경색 설정 (스크롤 시에도 보이도록) */
+  border-bottom: 1px solid #808080; /* 상단 도서 출판 제목 밑에 회색 라인 */
 }
 
 .mobile-header-title {
@@ -1198,30 +1288,53 @@ body.mobile-view-active .main-header {
   justify-content: center;
 }
 
-/* 모바일 책 섹션 표시 */
+/* 모바일 책 섹션 표시 - 각 컨테이너에서 패딩 관리 */
 .mobile-viewport .mobile-book-section {
   display: flex !important;
   flex-direction: column;
   align-items: flex-start !important;
-  padding: 16px 0 16px 20px !important;
+  padding: 0 0 0 20px !important; /* 좌측 패딩만 유지 */
   background-color: transparent;
-  margin-bottom: 0;
   margin-left: 15px;
 }
 
+/* 모든 도서 섹션 컨테이너 간격 통일 */
+.mobile-viewport .mobile-book-section {
+  margin-bottom: 20px !important; /* 모든 섹션 간 동일한 패딩 적용 */
+}
+
+/* 마지막 섹션은 하단 마진 제거 (푸터와의 간격) */
+.mobile-viewport .mobile-book-section:last-of-type {
+  margin-bottom: 0 !important;
+}
+
+/* 각 섹션의 제목과 카드 사이 패딩 10 */
+.mobile-viewport .mobile-book-section .section-header {
+  margin-bottom: 10px !important; /* 제목과 카드 사이 패딩 10 */
+  padding-bottom: 0 !important;
+}
+
 .mobile-viewport .section-header {
-  margin-bottom: 4px !important;
+  margin-bottom: 10px !important; /* 제목과 카드 사이 패딩 10 (각 섹션 컨테이너에서 관리) */
   padding: 0 0 0 0 !important;
   margin-left: 0 !important;
   margin-right: 0 !important;
   align-self: flex-start !important;
   padding-left: 0 !important;
+  padding-bottom: 0 !important;
+  border-bottom: none !important; /* 흰색 라인 제거 */
+  width: 100% !important;
+  position: relative; /* sticky 제거 - 제목과 카드를 함께 스크롤 */
+  z-index: 1;
+  background: transparent; /* 배경색 제거 */
 }
 
 .mobile-viewport .section-header h2 {
   color: #ffffff !important;
   font-size: 18px !important;
   font-weight: 700 !important;
+  margin: 0 !important;
+  padding-bottom: 0 !important;
 }
 
 .mobile-viewport .book-section {
@@ -1371,17 +1484,18 @@ body.mobile-view-active .main-header {
   z-index: 2;
 }
 
+.mobile-book-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
 .mobile-book-author {
   font-size: 11px;
   color: rgba(255, 255, 255, 0.9);
   font-weight: 500;
   margin: 0;
-}
-
-.mobile-book-info {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
+  margin-top: 2px;
 }
 
 .mobile-book-title {
@@ -1426,7 +1540,11 @@ body.mobile-view-active .main-header {
 
 .mobile-viewport .header-content {
   padding: 0 16px;
-  height: 60px;
+  height: 60px; /* 상단 제목 높이 60px */
+  position: sticky; /* 상단 고정 */
+  top: 0;
+  z-index: 1000;
+  background: #2a2a2a; /* 배경색 설정 */
 }
 
 .mobile-viewport .hero-carousel:not(.card-slider) {

@@ -4,7 +4,12 @@ import { doc, getDoc } from 'firebase/firestore'
 import { db, auth } from '../firebase'
 import { User, onAuthStateChanged } from 'firebase/auth'
 import ReviewApplicationModal from '../components/ReviewApplicationModal'
-import './BookDetailPage.css'
+import MobileHeader from '../components/MobileHeader'
+import './MobileBookDetailPage.css'
+// 아이콘 import
+import closeWhiteIcon from '../assets/icons/Close-white.png'
+import bookstoreWhiteIcon from '../assets/icons/bookstore-white.png'
+import writeIcon from '../assets/icons/write.png'
 
 interface Book {
   id?: string;
@@ -24,7 +29,7 @@ interface Book {
   purchaseUrl?: string;
 }
 
-const BookDetailPage: React.FC = () => {
+const MobileBookDetailPage: React.FC = () => {
   const { bookId } = useParams<{ bookId: string }>()
   const navigate = useNavigate()
   const [book, setBook] = useState<Book | null>(null)
@@ -119,7 +124,7 @@ const BookDetailPage: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="book-detail-page">
+      <div className="book-detail-page mobile-book-detail">
         <div className="loading-container">
           <p>로딩 중...</p>
         </div>
@@ -129,7 +134,7 @@ const BookDetailPage: React.FC = () => {
 
   if (!book) {
     return (
-      <div className="book-detail-page">
+      <div className="book-detail-page mobile-book-detail">
         <div className="error-container">
           <p>도서를 찾을 수 없습니다.</p>
           <button onClick={() => navigate('/')}>홈으로 돌아가기</button>
@@ -139,14 +144,13 @@ const BookDetailPage: React.FC = () => {
   }
 
   return (
-    <div className="book-detail-page">
+    <div className="book-detail-page mobile-book-detail">
       {/* 헤더 */}
-      <header className="book-detail-header">
-        <button className="back-button" onClick={() => {
-          // 모바일에서는 페이지 전환 애니메이션 없이 바로 이동
+      <MobileHeader 
+        title={book.title}
+        onBack={() => {
           const isMobile = window.innerWidth <= 768
           if (!isMobile) {
-            // 웹에서는 슬라이드 애니메이션 사용
             document.body.classList.add('page-sliding-right')
             setTimeout(() => {
               setTimeout(() => {
@@ -155,29 +159,46 @@ const BookDetailPage: React.FC = () => {
               navigate(-1)
             }, 50)
           } else {
-            // 모바일에서는 바로 이동
             document.body.classList.remove('page-sliding-right')
             navigate('/')
           }
-        }}>
-          ←
-        </button>
-        <div className="header-title-section">
-          <div className="header-left">
-            <div className="header-info-item">
-              <h1 className="book-title-header">{book.title}</h1>
-            </div>
-            <div className="header-info-item">
-              <p className="book-author-header">{book.author}</p>
-            </div>
+        }}
+      />
+
+      {/* 메인 컨텐츠 */}
+      <main className="book-detail-main mobile-book-detail-main">
+        {/* 책 표지와 도서 정보 나란히 */}
+        <div className="mobile-book-cover-info-wrapper">
+          {/* 책 표지 */}
+          <div 
+            className="mobile-book-cover"
+            onClick={() => book.imageUrl && setShowFullImage(true)}
+            style={{ cursor: book.imageUrl ? 'pointer' : 'default' }}
+          >
+            {book.imageUrl ? (
+              <img src={book.imageUrl} alt={book.title} />
+            ) : (
+              <div className="book-image-placeholder">책 이미지</div>
+            )}
           </div>
-          <div className="header-right">
-            <div className="header-info-item">
-              <span className="info-label">장르:</span>
-              <span className="info-value">{book.genre || '-'}</span>
+
+          {/* 도서 정보 */}
+          <div className="mobile-book-info-section">
+            <div className="mobile-book-info-item">
+              <span className="mobile-info-label">저자명:</span>
+              <span className="mobile-info-value">{book.author || '-'}</span>
             </div>
-            <div className="header-info-item">
-              <span className="info-value">
+            <div className="mobile-book-info-item">
+              <span className="mobile-info-label">장르:</span>
+              <span className="mobile-info-value">{book.genre || '-'}</span>
+            </div>
+            <div className="mobile-book-info-item">
+              <span className="mobile-info-label">출판사:</span>
+              <span className="mobile-info-value">{book.publisher || '-'}</span>
+            </div>
+            <div className="mobile-book-info-item">
+              <span className="mobile-info-label">출간일:</span>
+              <span className="mobile-info-value">
                 {book.publishedDate 
                   ? (() => {
                       const date = new Date(book.publishedDate)
@@ -189,69 +210,57 @@ const BookDetailPage: React.FC = () => {
                   : '-'}
               </span>
             </div>
-          </div>
-        </div>
-      </header>
-
-      {/* 메인 컨텐츠 */}
-      <main className="book-detail-main">
-
-        {/* 책 이미지와 연속된 내용 섹션 */}
-        <div className="book-content-flow-section">
-          {/* 1. 표지 이미지 영역 */}
-          <div 
-            className="book-image-flow"
-            onClick={() => book.imageUrl && setShowFullImage(true)}
-            style={{ cursor: book.imageUrl ? 'pointer' : 'default' }}
-          >
-            {book.imageUrl ? (
-              <img src={book.imageUrl} alt={book.title} />
-            ) : (
-              <div className="book-image-placeholder">책 이미지</div>
+            {book.purchaseUrl && (
+              <div className="mobile-book-info-item mobile-purchase-item">
+                <span className="mobile-info-label">도서구매:</span>
+                <button 
+                  className="mobile-purchase-link-button"
+                  onClick={handlePurchaseClick}
+                  aria-label="구매링크"
+                >
+                  <img src={bookstoreWhiteIcon} alt="구매링크" style={{ width: '30px', height: '30px' }} />
+                </button>
+              </div>
             )}
           </div>
-          
-          {/* 2. Text 시작 영역 (이미지 옆) */}
-          <div className="book-description-start">
-            <div 
-              className="book-description-full"
-              dangerouslySetInnerHTML={{ __html: book.description || '도서 설명이 없습니다.' }}
-            />
-          </div>
         </div>
-        
-        {/* 3. Text 연속으로 넣는 영역 (이미지 아래, 전체 너비) */}
-        <div className="book-description-continue">
-          {/* 이 영역은 CSS로 이미지 아래에 자동으로 배치됩니다 */}
+
+        {/* 도서 소개 */}
+        <div className="mobile-book-description-section">
+          <h2 className="mobile-book-description-title">도서 소개</h2>
+          <div 
+            className="mobile-book-description-content"
+            dangerouslySetInnerHTML={{ __html: book.description || '도서 설명이 없습니다.' }}
+          />
         </div>
       </main>
 
-      {/* 하단 액션 버튼 */}
-      <footer className="book-detail-footer">
-        <div className="footer-buttons-container">
-          {book.category === '서평도서' && (
-            <button className="review-apply-button" onClick={handleReviewApplyClick}>
-              서평 신청
-            </button>
-          )}
-          {book.purchaseUrl && (
-            <button className="purchase-link-button" onClick={handlePurchaseClick}>
-              구매링크
-            </button>
-          )}
-        </div>
-      </footer>
+      {/* 서평신청 플로팅 버튼 */}
+      {book.category === '서평도서' && (
+        <button 
+          className="mobile-review-floating-button" 
+          onClick={handleReviewApplyClick}
+          aria-label="서평 신청"
+        >
+          <img src={writeIcon} alt="서평 신청" />
+          <span className="mobile-review-button-text">서평신청</span>
+        </button>
+      )}
 
       {/* 전체 화면 이미지 뷰어 */}
       {showFullImage && book.imageUrl && (
-        <div className="full-image-overlay" onClick={handleCloseFullImage}>
-          <button className="full-image-close" onClick={handleCloseFullImage}>
-            ×
+        <div className="full-image-overlay mobile-full-image-overlay" onClick={handleCloseFullImage}>
+          <button 
+            className="full-image-close mobile-full-image-close" 
+            onClick={handleCloseFullImage}
+            aria-label="닫기"
+          >
+            <img src={closeWhiteIcon} alt="닫기" style={{ width: '24px', height: '24px' }} />
           </button>
           <img 
             src={book.imageUrl} 
             alt={book.title}
-            className="full-image"
+            className="full-image mobile-full-image"
             onClick={(e) => e.stopPropagation()}
           />
         </div>
@@ -268,5 +277,5 @@ const BookDetailPage: React.FC = () => {
   )
 }
 
-export default BookDetailPage
+export default MobileBookDetailPage
 

@@ -4,10 +4,10 @@ import { db } from '../firebase'
 import ColorPaletteMenu from './ColorPaletteMenu'
 import './SlideAddModal.css'
 // 아이콘 이미지 import
-import calendarIcon from '../assets/icons/calendar64.png'
+import calendarIcon from '../assets/icons/calendar.png'
 import colorPaletteIcon from '../assets/icons/color-palette.png'
-import changeImageIcon from '../assets/icons/chagne-image64-1.png'
-import trashIcon64 from '../assets/icons/Trash64-1.png'
+import changeImageIcon from '../assets/icons/Chage-image.png'
+import trashIcon64 from '../assets/icons/Trash.png'
 
 interface SlideData {
   id?: string

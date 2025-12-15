@@ -126,104 +126,11 @@
   color: #6b7280;
 }
 
-.avatar-block {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 8px;
-}
-
-.avatar {
-  width: 64px;
-  height: 64px;
-  border-radius: 18px;
-  background: linear-gradient(135deg, #667eea, #764ba2);
-  color: #ffffff;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: 700;
-  font-size: 24px;
-  cursor: pointer;
-  position: relative;
-  overflow: hidden;
-  background-size: cover;
-  background-position: center;
-  transition: transform 0.2s ease;
-}
-
-.avatar:hover {
-  transform: translateY(-2px);
-}
-
-.avatar.has-image {
-  color: transparent;
-}
-
-.avatar[aria-disabled="true"] {
-  cursor: default;
-}
-
-.avatar[aria-disabled="true"]:hover {
-  transform: none;
-}
-
-.avatar__initial {
-  transition: opacity 0.2s ease;
-}
-
-.avatar.has-image .avatar__initial {
-  display: none;
-}
-
-.avatar__plus {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  opacity: 0.25;
-  transition: opacity 0.2s ease;
-}
-
-.avatar.has-image .avatar__plus {
-  opacity: 0;
-}
-
-.avatar.has-image:hover .avatar__plus,
-.avatar.has-image:focus .avatar__plus {
-  opacity: 1;
-}
-
-.avatar__plus img {
-  width: 28px;
-  height: 28px;
-}
-
-.avatar:hover .avatar__initial,
-.avatar:focus .avatar__initial {
-  opacity: 0;
-}
-
-.avatar:hover .avatar__plus,
-.avatar:focus .avatar__plus {
-  opacity: 1;
-}
-
-.avatar-caption {
-  font-size: 12px;
-  color: #4b5563;
-  font-weight: 600;
-}
-
-.avatar-caption.disabled {
-  color: #a1a1aa;
-}
-
 .user-form {
   display: flex;
   flex-direction: column;
   gap: 18px;
+  background: #ffffff;
 }
 
 .user-form__group {
@@ -632,12 +539,6 @@
     margin-left: 0;
   }
 
-  .avatar {
-    width: 56px;
-    height: 56px;
-    font-size: 20px;
-  }
-
   .user-review-stats {
     grid-template-columns: repeat(2, minmax(120px, 1fr));
   }
@@ -645,4 +546,685 @@
   .user-form__group {
     grid-template-columns: 1fr;
   }
+}
+
+/* 모바일 마이페이지 스타일 */
+body.mobile-view-active .user-page.publishing-website.mobile-viewport {
+  background: #2a2a2a;
+  padding: 0;
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  box-sizing: border-box;
+}
+
+body.mobile-view-active .user-page {
+  padding: 0;
+  background: transparent;
+  min-height: 100vh;
+}
+
+body.mobile-view-active .user-page.mobile-viewport {
+  background: #2a2a2a;
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+}
+
+body.mobile-view-active .user-dashboard {
+  max-width: 100%;
+  border-radius: 0;
+  box-shadow: none;
+  grid-template-columns: 1fr;
+  background: transparent;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+body.mobile-view-active .user-sidebar {
+  display: none;
+}
+
+body.mobile-view-active .user-main {
+  padding: 0;
+  padding-top: 50px;
+  gap: 0;
+  background: #2a2a2a;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  flex: 1;
+  overflow: hidden;
+  -webkit-overflow-scrolling: touch;
+  height: calc(100vh - 50px);
+  min-height: 0;
+}
+
+body.mobile-view-active .user-main-top {
+  display: none;
+}
+
+body.mobile-view-active .user-main__header {
+  display: none;
+}
+
+/* 모바일 회원정보 헤더 래퍼 */
+.mobile-user-header-wrapper {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 100;
+  background-color: #2a2a2a;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  height: 50px;
+}
+
+body.mobile-view-active:not(.actual-mobile-device) .mobile-user-header-wrapper {
+  max-width: 375px;
+  width: 375px;
+  left: 50%;
+  right: auto;
+  transform: translateX(-50%);
+}
+
+body.mobile-view-active.actual-mobile-device .mobile-user-header-wrapper {
+  max-width: 100vw;
+  width: 100%;
+  left: 0;
+  right: 0;
+  transform: none;
+}
+
+.mobile-user-header-wrapper .mobile-header {
+  position: relative;
+  border-bottom: none;
+  height: 100%;
+}
+
+.mobile-user-header-wrapper::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: rgba(255, 255, 255, 0.1) !important;
+  display: block !important;
+  z-index: 1;
+}
+
+.mobile-header-subtitle {
+  display: block;
+  font-size: 16px;
+  font-weight: 700;
+  color: #A1C5FF;
+  padding: 0 16px 12px 16px;
+  font-family: 'Suite', sans-serif;
+  line-height: 1.3;
+}
+
+/* 모바일 회원 정보 섹션 - 검정색 배경 */
+.mobile-user-profile {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: 100%;
+  padding: 0;
+  background: #2a2a2a;
+}
+
+.mobile-user-info-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  width: 100%;
+}
+
+.mobile-user-info-section .info-display-item {
+  display: flex;
+  align-items: center;
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 24px;
+  min-height: 24px;
+  max-height: 24px;
+}
+
+.mobile-user-info-section .info-display-label {
+  font-weight: 400;
+  color: #9ca3af;
+  min-width: 60px;
+  margin-right: 8px;
+  flex-shrink: 0;
+  font-family: 'Suite', sans-serif;
+  font-size: 12px;
+}
+
+.mobile-user-info-section .info-display-input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid transparent;
+  color: #9ca3af;
+  font-weight: 700;
+  font-size: 14px;
+  padding: 4px 0;
+  font-family: 'Suite', sans-serif;
+  cursor: text;
+  transition: color 0.2s;
+}
+
+.mobile-user-info-section .info-display-input.modified {
+  color: #2563eb;
+  font-weight: 700;
+}
+
+.mobile-user-info-section .info-display-input:focus {
+  outline: none;
+  border-bottom-color: #2563eb;
+}
+
+.mobile-user-info-section .info-display-input::placeholder {
+  color: rgba(156, 163, 175, 0.5);
+  font-weight: 400;
+}
+
+.mobile-user-info-section .info-display-input:disabled {
+  cursor: default;
+  opacity: 1;
+  border-bottom-color: transparent;
+}
+
+.mobile-user-edit-section {
+  display: flex;
+  gap: 16px;
+  justify-content: center;
+  margin-top: 16px;
+  align-items: center;
+}
+
+.mobile-edit-toggle-text,
+.mobile-save-text {
+  color: #9ca3af;
+  font-size: 14px;
+  font-weight: 400;
+  cursor: pointer;
+  font-family: 'Suite', sans-serif;
+  transition: color 0.2s;
+  user-select: none;
+}
+
+.mobile-edit-toggle-text:hover,
+.mobile-save-text:hover:not(.disabled) {
+  color: #2563eb;
+}
+
+.mobile-save-text.disabled {
+  color: #6b7280;
+  cursor: not-allowed;
+}
+
+/* 모바일 서평관리 버튼 */
+.mobile-review-management-btn {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  width: 56px;
+  height: 56px;
+  background: #2563eb;
+  border: none;
+  border-radius: 50%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.4);
+  z-index: 1000;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.mobile-review-management-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(37, 99, 235, 0.5);
+}
+
+.mobile-review-management-btn img {
+  width: 24px;
+  height: 24px;
+}
+
+.mobile-review-management-btn span {
+  font-size: 10px;
+  color: #ffffff;
+  font-family: 'Suite', sans-serif;
+  font-weight: 500;
+}
+
+/* 모바일 서평 관리 섹션 */
+.mobile-user-review-container {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  width: 100%;
+  padding: 0;
+  background: #2a2a2a;
+  border: none !important;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  height: calc(100vh - 50px);
+}
+
+.mobile-review-monthly-stats {
+  width: calc(100% - 48px);
+  padding: 0 24px;
+  margin: 20px 24px 0 24px;
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  border-bottom: none;
+  box-sizing: border-box;
+}
+
+.mobile-review-monthly-text {
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.9);
+  font-family: 'Suite', sans-serif;
+  text-align: right;
+  padding: 0;
+  height: 20px;
+  line-height: 20px;
+  display: inline-block;
+}
+
+.monthly-count-over {
+  color: #ef4444; /* 빨간색 */
+  font-weight: 700;
+}
+
+.monthly-count-under {
+  color: #3b82f6; /* 파란색 */
+  font-weight: 700;
+}
+
+/* 웹 버전 월별 통계 */
+.web-review-monthly-stats {
+  width: 100%;
+  padding: 0 24px;
+  margin: 20px 0 0 0;
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  border-bottom: none;
+  box-sizing: border-box;
+}
+
+.web-review-monthly-text {
+  font-size: 14px;
+  color: rgba(0, 0, 0, 0.9);
+  font-family: 'Suite', sans-serif;
+  text-align: right;
+  padding: 0;
+  height: 20px;
+  line-height: 20px;
+  display: inline-block;
+}
+
+.web-review-monthly-text .monthly-count-over {
+  color: #ef4444; /* 빨간색 */
+  font-weight: 700;
+}
+
+.web-review-monthly-text .monthly-count-under {
+  color: #3b82f6; /* 파란색 */
+  font-weight: 700;
+}
+
+.mobile-review-stats {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 0;
+  width: calc(100% - 48px);
+  padding: 0 10px;
+  margin: 0 24px 0 24px;
+  margin-bottom: 0;
+  border: none !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
+  border-right: none !important;
+  border-left: none !important;
+  border-top: none !important;
+  padding-bottom: 0;
+  margin-bottom: 0;
+  position: relative;
+}
+
+.mobile-review-stats::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: rgba(255, 255, 255, 0.1) !important;
+  display: block !important;
+}
+
+.mobile-review-stat-card {
+  background: rgba(255, 255, 255, 0.05);
+  border: none !important;
+  border-bottom: none !important;
+  border-right: none !important;
+  border-left: none !important;
+  border-top: none !important;
+  border-radius: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0;
+}
+
+.mobile-review-stat-card:first-child {
+  border-top-left-radius: 12px;
+  border-bottom-left-radius: 12px;
+}
+
+.mobile-review-stat-card:last-child {
+  border-top-right-radius: 12px;
+  border-bottom-right-radius: 12px;
+}
+
+.mobile-review-stat-value {
+  font-size: 20px;
+  font-weight: 700;
+  color: #60a5fa;
+  font-family: 'Suite', sans-serif;
+  padding-top: 6px;
+  padding-bottom: 0;
+  margin: 0;
+  height: 38px;
+  line-height: 38px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.mobile-review-stat-label {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.7);
+  font-family: 'Suite', sans-serif;
+  padding-bottom: 12px;
+  margin: 0;
+}
+
+.mobile-review-loading,
+.mobile-review-empty {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px dashed rgba(255, 255, 255, 0.2);
+  border-radius: 12px;
+  padding: 24px;
+  text-align: center;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 14px;
+  font-family: 'Suite', sans-serif;
+}
+
+.mobile-review-list-container {
+  position: relative;
+  display: flex;
+  width: 100%;
+  padding: 12px 24px 24px 24px;
+  margin: 0;
+  flex: 1;
+  overflow-y: auto !important;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+  min-height: 0;
+  height: 100%;
+}
+
+/* 가느다란 스크롤바 스타일 */
+.mobile-review-list-container::-webkit-scrollbar {
+  width: 2px !important;
+}
+
+.mobile-review-list-container::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.mobile-review-list-container::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 1px;
+}
+
+.mobile-review-list-container::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.5);
+}
+
+/* Firefox */
+.mobile-review-list-container {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.3) transparent;
+}
+
+.mobile-review-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  width: 100%;
+  flex: 1;
+  padding-right: 0;
+}
+
+.mobile-review-scroll-indicator {
+  display: none !important;
+}
+
+.mobile-review-scroll-track {
+  width: 2px;
+  height: 100%;
+  background: rgba(255, 255, 255, 0.3) !important;
+  border-radius: 2px;
+  position: relative;
+  display: block !important;
+}
+
+.mobile-review-scroll-thumb {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  width: 100%;
+  min-height: 40px;
+  background: rgba(255, 255, 255, 0.7) !important;
+  border-radius: 2px;
+  transition: top 0.1s ease, height 0.1s ease;
+  display: block !important;
+}
+
+.mobile-review-card {
+  background: rgba(255, 255, 255, 0.05);
+  border: none !important;
+  border-radius: 0;
+  padding: 16px;
+  padding-bottom: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  position: relative;
+}
+
+.mobile-review-card:not(:last-child) {
+  border-bottom: none !important;
+  margin-bottom: 0 !important;
+  padding-bottom: 16px !important;
+}
+
+.mobile-review-card:not(:last-child)::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: #ffffff !important;
+  opacity: 0.5 !important;
+  display: block !important;
+  z-index: 10;
+  pointer-events: none;
+}
+
+.mobile-review-card:last-child {
+  border-bottom: none !important;
+}
+
+.mobile-review-card:last-child::after {
+  display: none !important;
+}
+
+.mobile-review-card-header {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.mobile-review-card-title-row {
+  display: flex;
+  align-items: center;
+}
+
+.mobile-review-card-title-row h3 {
+  font-size: 16px;
+  font-weight: 700;
+  color: #ffffff;
+  margin: 0;
+  font-family: 'Suite', sans-serif;
+}
+
+.mobile-review-card-author-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.mobile-review-card-subtitle {
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.7);
+  margin: 0;
+  font-family: 'Suite', sans-serif;
+}
+
+.mobile-review-status-badge {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+  font-family: 'Suite', sans-serif;
+  color: #FFFFB3;
+  pointer-events: none;
+  user-select: none;
+  cursor: default;
+}
+
+.mobile-review-status-badge.status-서평신청 {
+  background: rgba(99, 102, 241, 0.2);
+  color: #FFFFB3;
+}
+
+.mobile-review-status-badge.status-도서발송 {
+  background: rgba(14, 165, 233, 0.2);
+  color: #FFFFB3;
+}
+
+.mobile-review-status-badge.status-서평대기 {
+  background: rgba(245, 158, 11, 0.2);
+  color: #FFFFB3;
+}
+
+.mobile-review-status-badge.status-서평완료 {
+  background: rgba(59, 130, 246, 0.2);
+  color: #FFFFB3;
+}
+
+.mobile-review-card-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.7);
+  font-family: 'Suite', sans-serif;
+}
+
+.mobile-review-card-meta-content {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.mobile-review-card-meta-dates {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+}
+
+.mobile-review-card-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.mobile-review-apply-text {
+  font-size: 14px;
+  font-weight: 600;
+  font-family: 'Suite', sans-serif;
+  color: rgba(255, 255, 255, 0.5);
+  transition: color 0.2s;
+}
+
+.mobile-review-apply-text.active {
+  color: #FFFFFFB3;
+}
+
+.mobile-review-icon-text {
+  font-size: 14px;
+  font-weight: 600;
+  font-family: 'Suite', sans-serif;
+  color: #2563eb;
+  transition: color 0.2s;
+}
+
+.mobile-review-icon-text.active {
+  color: #96AEFC;
+}
+
+.mobile-review-write-btn {
+  background: #2563eb;
+  color: #ffffff;
+  border: none;
+  border-radius: 8px;
+  padding: 12px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: 'Suite', sans-serif;
+  transition: background-color 0.2s;
+}
+
+.mobile-review-write-btn:hover {
+  background: #1d4ed8;
 }

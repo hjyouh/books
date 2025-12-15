@@ -13,91 +13,16 @@ import { runSlidesUpdate } from '../utils/updateSlidesDatabase'
 import { runBooksUpdate } from '../utils/updateBooksDatabase'
 import { runMembersUpdate } from '../utils/updateMembersDatabase'
 import { runReviewsUpdate } from '../utils/updateReviewsDatabase'
+import AdminSidebar from './admin/components/AdminSidebar'
+import MainSlideSection from './admin/sections/MainSlideSection'
+import BooksSection from './admin/sections/BooksSection'
+import AdManagementSection from './admin/sections/AdManagementSection'
+import MemberManagementSection from './admin/sections/MemberManagementSection'
+import ReviewManagementSection from './admin/sections/ReviewManagementSection'
+import { MenuItem, MemberData, BookData, SlideData, ReviewApplicationData } from './admin/types'
+import { formatPostingDate } from './admin/utils'
+import dbUpdateIcon from '../assets/icons/Cloud-check.png'
 import './AdminPage.css'
-// 아이콘 이미지 import
-import editIcon from '../assets/icons/edit.png'
-import leftArrowIcon from '../assets/icons/left (1).png'
-import rightArrowIcon from '../assets/icons/Right (1).png'
-import trashIcon from '../assets/icons/Trash.png'
-import addImageIcon from '../assets/icons/add image 64.png'
-import dbUpdateIcon from '../assets/icons/DB update 64.png'
-import onButtonIcon from '../assets/icons/on-button 64.png'
-import offButtonIcon from '../assets/icons/off-button 64.png'
-
-type MenuItem = 'home' | 'main-slide' | 'books' | 'ad-management' | 'member-management' | 'review-management'
-
-interface MemberData {
-  id: string;
-  uid: string;
-  name: string;
-  nickname: string;
-  phone: string;
-  email: string;
-  address: string;
-  blog?: string;
-  instagram?: string;
-  level: string;
-  createdAt: any;
-  isAdmin?: boolean;
-}
-
-interface BookData {
-  id: string;
-  title: string;
-  author: string;
-  category: string;
-  genre: string;
-  description: string;
-  imageUrl?: string;
-  rating: number;
-  reviewCount: number;
-  status: string;
-  createdAt: any;
-  publisher?: string;
-  publishedDate?: string;
-}
-
-interface SlideData {
-  id: string;
-  slideType?: 'main' | 'ad'; // 슬라이드 구분 (메인슬라이드/광고 슬라이드)
-  title: string;
-  subtitle: string;
-  imageUrl: string;
-  linkUrl: string;
-  linkType: 'book' | 'custom'; // 도서 페이지, 커스텀 링크
-  order: number;
-  isActive: boolean;
-  createdAt: any;
-  updatedAt?: any;
-  titleColor?: string; // 제목 색상
-  subtitleColor?: string; // 부제목 색상
-  postingStart?: Timestamp | null;
-  postingEnd?: Timestamp | null;
-}
-
-interface ReviewApplicationData {
-  서평ID: string;
-  회원ID: string;
-  도서ID: string;
-  신청일: any;
-  처리상태: '서평신청' | '도서발송' | '서평대기' | '서평완료';
-  발송일: any | null;
-  완료일: any | null;
-  관리자메모: string;
-  bookTitle: string;
-  bookAuthor: string;
-  applicantName: string;
-  applicantPhone: string;
-  applicantEmail: string;
-  applicantAddress: string;
-  applicantId?: string;
-  applicantNickname?: string;
-  applicantBlog?: string;
-  applicantInstagram?: string;
-  서평갯수?: number;
-  createdAt: any;
-  updatedAt: any;
-}
 
 const AdminPage: React.FC = () => {
   const [activeMenu, setActiveMenu] = useState<MenuItem>('main-slide')
@@ -122,15 +47,6 @@ const AdminPage: React.FC = () => {
   const [selectedApplications, setSelectedApplications] = useState<Set<string>>(new Set())
   const [memberSearchQuery, setMemberSearchQuery] = useState<string>('')
   const navigate = useNavigate()
-
-  const menuItems = [
-    { id: 'home' as MenuItem, label: '홈', icon: '🏠' },
-    { id: 'main-slide' as MenuItem, label: '메인슬라이드', icon: '📺' },
-    { id: 'books' as MenuItem, label: '도서관리', icon: '📚' },
-    { id: 'ad-management' as MenuItem, label: '광고관리', icon: '📢' },
-    { id: 'member-management' as MenuItem, label: '회원관리', icon: '👥' },
-    { id: 'review-management' as MenuItem, label: '서평관리', icon: '💬' }
-  ]
 
   const handleMenuClick = (menuId: MenuItem) => {
     if (menuId === 'home') {
@@ -255,11 +171,7 @@ const AdminPage: React.FC = () => {
       // 먼저 OFF 슬라이드와 ON 슬라이드를 분리
       // 중요: 데이터베이스에서 가져온 상태를 그대로 사용
       const offSlides = slidesData.filter(slide => {
-        const isOff = slide.isActive === false
-        if (!isOff) {
-          console.log(`[fetchSlides] 경고: 슬라이드 ${slide.id}가 ON 상태로 가져와졌습니다 (isActive=${slide.isActive})`)
-        }
-        return isOff
+        return slide.isActive === false
       })
       const onSlides = slidesData.filter(slide => slide.isActive === true)
       
@@ -267,10 +179,10 @@ const AdminPage: React.FC = () => {
       console.log(`[fetchSlides] OFF 슬라이드 ID들:`, offSlides.map(s => s.id))
       console.log(`[fetchSlides] ON 슬라이드 ID들:`, onSlides.map(s => s.id))
       
-      // 데이터베이스에서 모든 슬라이드가 ON으로 가져와졌는지 확인
-      if (offSlides.length === 0 && slidesData.length > 0) {
-        console.warn(`[fetchSlides] 경고: 데이터베이스에서 OFF 슬라이드가 없습니다! 모든 슬라이드가 ON 상태입니다.`)
-      }
+      // 데이터베이스에서 모든 슬라이드가 ON으로 가져와졌는지 확인 (정보성 로그)
+      // if (offSlides.length === 0 && slidesData.length > 0) {
+      //   console.log(`[fetchSlides] 정보: 모든 슬라이드가 ON 상태입니다.`)
+      // }
       
       // OFF 슬라이드는 절대 변경하지 않음 (포스팅 기간 체크 로직을 완전히 건너뜀)
       // 중요: OFF 슬라이드는 포스팅 기간을 체크하지 않고 절대 자동 활성화하지 않음
@@ -680,33 +592,7 @@ const AdminPage: React.FC = () => {
     fetchBooks() // 도서 목록 새로고침
   }
 
-  const formatPostingDate = (value: any): string => {
-    if (!value) return ''
-    try {
-      let date: Date | null = null
-      if (value.toDate) {
-        date = value.toDate()
-      } else if (value.seconds) {
-        date = new Date(value.seconds * 1000)
-      } else if (value instanceof Date) {
-        date = value
-      } else if (typeof value === 'string') {
-        const parsed = Date.parse(value)
-        if (!isNaN(parsed)) {
-          date = new Date(parsed)
-        }
-      }
-      if (!date) return ''
-      const year = String(date.getFullYear()).slice(-2)
-      const month = String(date.getMonth() + 1).padStart(2, '0')
-      const day = String(date.getDate()).padStart(2, '0')
-      return `${year}/${month}/${day}`
-    } catch (error) {
-      console.error('포스팅 기간 표시 오류:', error)
-      return ''
-    }
-  }
-
+  // renderPostingPeriod는 old 케이스에서만 사용되므로 유지
   const renderPostingPeriod = (slide: SlideData) => {
     const start = formatPostingDate(slide.postingStart)
     const end = formatPostingDate(slide.postingEnd)
@@ -1501,292 +1387,38 @@ const AdminPage: React.FC = () => {
   const renderContent = () => {
     switch (activeMenu) {
       case 'main-slide':
-        const activeSlides = slides.filter(slide => slide.isActive && (slide.slideType === 'main' || !slide.slideType)).sort((a, b) => {
-          // order가 같으면 id로 정렬하여 일관된 순서 유지
-          if (a.order === b.order) {
-            return a.id.localeCompare(b.id)
-          }
-          return a.order - b.order
-        })
-        const inactiveSlides = slides.filter(slide => !slide.isActive && (slide.slideType === 'main' || !slide.slideType)).sort((a, b) => {
-          // order가 같으면 id로 정렬하여 일관된 순서 유지
-          if (a.order === b.order) {
-            return a.id.localeCompare(b.id)
-          }
-          return a.order - b.order
-        })
-        
         return (
-          <div className="content-section slide-management-section">
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-              <h2>📺 메인슬라이드 관리</h2>
-              <button 
-                onClick={async () => {
-                  if (confirm('슬라이드 데이터베이스를 최신 스키마로 업데이트하시겠습니까?')) {
-                    await runSlidesUpdate()
-                    fetchSlides() // 업데이트 후 목록 새로고침
-                  }
-                }}
-                style={{
-                  padding: '4px',
-                  background: 'transparent',
-                  border: 'none',
-                  borderRadius: '6px',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '4px'
-                }}
-              >
-                <img src={dbUpdateIcon} alt="DB 업데이트" style={{ width: '48px', height: '48px' }} />
-                <span style={{ fontSize: '10px', fontWeight: 500, color: '#333', textAlign: 'center' }}>DB UPDATE</span>
-              </button>
-            </div>
-            
-            {/* ON AIR 슬라이드 영역 */}
-            <div className="slide-section on-air-section">
-              <div className="slide-section-header">
-                        <h3>ON AIR 슬라이드 (16:9 비율 권장)</h3>
-                <span className="slide-count">{activeSlides.length}개 활성</span>
-              </div>
-              <div className="slides-grid">
-                {activeSlides.map((slide, index) => {
-                  console.log(`[렌더링] 슬라이드 ${slide.id} - index: ${index}, order: ${slide.order}`)
-                  return (
-                  <div key={slide.id} className="slide-card">
-                    <div className="slide-image-container">
-                      {slide.imageUrl ? (
-                        <img src={slide.imageUrl} alt={slide.title} className="slide-image" />
-                      ) : (
-                        <div className="slide-placeholder">
-                          <span>카이드 이미지</span>
-                        </div>
-                      )}
-                      {(slide.title || slide.subtitle) && (
-                        <div className="slide-content-overlay">
-                          {slide.title && (
-                            <h4 
-                              className="slide-title"
-                              style={{ color: (slide as any).titleColor || '#FFFFFF' }}
-                            >
-                              {slide.title}
-                            </h4>
-                          )}
-                          {slide.subtitle && (
-                            <p 
-                              className="slide-subtitle"
-                              style={{ color: (slide as any).subtitleColor || '#FFFFFF' }}
-                            >
-                              {slide.subtitle}
-                            </p>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                    <div className="slide-actions">
-                      <div className="slide-controls">
-                        <label className="toggle-switch">
-                          <input
-                            type="checkbox"
-                            checked={slide.isActive}
-                            onChange={(e) => {
-                              e.preventDefault()
-                              e.stopPropagation()
-                              console.log('ON AIR 체크박스 클릭:', { slideId: slide.id, currentIsActive: slide.isActive, willBeActive: !slide.isActive })
-                              handleSlideToggle(slide.id, !slide.isActive, 'main')
-                            }}
-                          />
-                          <span className="toggle-slider">
-                            <img 
-                              src={slide.isActive ? onButtonIcon : offButtonIcon} 
-                              alt={slide.isActive ? "활성" : "비활성"} 
-                              style={{ width: '64px', height: '64px' }} 
-                            />
-                          </span>
-                        </label>
-                        {renderPostingPeriod(slide)}
-                        <div className="slide-action-buttons">
-                          <button 
-                            type="button"
-                            className="slide-edit-icon-bottom"
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              setSelectedSlide(slide)
-                              setIsSlideEditModalOpen(true)
-                            }}
-                            title="편집"
-                          >
-                            <img src={editIcon} alt="편집" style={{ width: '24px', height: '24px' }} />
-                          </button>
-                          <button 
-                            type="button"
-                            className="slide-move-btn"
-                            onClick={(e) => {
-                              e.preventDefault()
-                              e.stopPropagation()
-                              console.log(`[버튼 클릭] 왼쪽 이동 - slideId: ${slide.id}, index: ${index}, disabled: ${index === 0}`)
-                              if (index > 0) {
-                                moveSlideUp(slide.id, 'main')
-                              }
-                            }}
-                            disabled={index === 0}
-                            title="왼쪽으로 이동"
-                          >
-                            <img src={leftArrowIcon} alt="왼쪽 이동" style={{ width: '24px', height: '24px' }} />
-                          </button>
-                          <button 
-                            type="button"
-                            className="slide-move-btn"
-                            onClick={(e) => {
-                              e.preventDefault()
-                              e.stopPropagation()
-                              console.log(`[버튼 클릭] 오른쪽 이동 - slideId: ${slide.id}, index: ${index}, disabled: ${index === activeSlides.length - 1}`)
-                              if (index < activeSlides.length - 1) {
-                                moveSlideDown(slide.id, 'main')
-                              }
-                            }}
-                            disabled={index === activeSlides.length - 1}
-                            title="오른쪽으로 이동"
-                          >
-                            <img src={rightArrowIcon} alt="오른쪽 이동" style={{ width: '24px', height: '24px' }} />
-                          </button>
-                          <button 
-                            type="button"
-                            className="slide-delete-btn"
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              handleDeleteSlide(slide.id)
-                            }}
-                            title="삭제"
-                          >
-                            <img src={trashIcon} alt="삭제" style={{ width: '24px', height: '24px' }} />
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                  )
-                })}
-                
-                {/* 새 슬라이드 추가 영역 */}
-                <div 
-                  className="slide-card add-slide-card"
-                  onClick={() => {
-                    setSelectedSlide(null)
-                    setIsSlideModalOpen(true)
-                  }}
-                >
-                  <div className="add-slide-area">
-                    <div className="add-slide-icon">
-                      <img src={addImageIcon} alt="슬라이드 추가" style={{ width: '64px', height: '64px' }} />
-                    </div>
-                    <p>슬라이드 추가</p>
-                    <button className="add-slide-button">+ 새 슬라이드 추가</button>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* OFF 슬라이드 영역 */}
-            <div className="slide-section off-section">
-              <div className="slide-section-header">
-                <h3>OFF 슬라이드</h3>
-                <span className="slide-count">{inactiveSlides.length}개 비활성</span>
-              </div>
-              {inactiveSlides.length === 0 ? (
-                <div className="empty-slides-message">비활성 슬라이드가 없습니다.</div>
-              ) : (
-                <div className="slides-grid">
-                  {inactiveSlides.map((slide) => (
-                    <div key={slide.id} className="slide-card">
-                      <div className="slide-image-container">
-                        {slide.imageUrl ? (
-                          <img src={slide.imageUrl} alt={slide.title} className="slide-image" />
-                        ) : (
-                          <div className="slide-placeholder">
-                            <span>카이드 이미지</span>
-                          </div>
-                        )}
-                        {(slide.title || slide.subtitle) && (
-                          <div className="slide-content-overlay">
-                            {slide.title && (
-                              <h4 
-                                className="slide-title"
-                                style={{ color: (slide as any).titleColor || '#FFFFFF' }}
-                              >
-                                {slide.title}
-                              </h4>
-                            )}
-                            {slide.subtitle && (
-                              <p 
-                                className="slide-subtitle"
-                                style={{ color: (slide as any).subtitleColor || '#FFFFFF' }}
-                              >
-                                {slide.subtitle}
-                              </p>
-                            )}
-                          </div>
-                        )}
-                      </div>
-                      <div className="slide-actions">
-                        <div className="slide-controls">
-                          <label className="toggle-switch inactive">
-                            <input
-                              type="checkbox"
-                              checked={slide.isActive}
-                              onChange={(e) => {
-                                e.preventDefault()
-                                e.stopPropagation()
-                                console.log('OFF 체크박스 클릭:', { slideId: slide.id, currentIsActive: slide.isActive, willBeActive: !slide.isActive })
-                                handleSlideToggle(slide.id, !slide.isActive, 'main')
-                              }}
-                            />
-                            <span className="toggle-slider">
-                              <img 
-                                src={slide.isActive ? onButtonIcon : offButtonIcon} 
-                                alt={slide.isActive ? "활성" : "비활성"} 
-                                style={{ width: '64px', height: '64px' }} 
-                              />
-                            </span>
-                          </label>
-                          {renderPostingPeriod(slide)}
-                          <div className="slide-action-buttons">
-                            <button 
-                              type="button"
-                              className="slide-edit-icon-bottom"
-                              onClick={(e) => {
-                                e.stopPropagation()
-                                setSelectedSlide(slide)
-                                setIsSlideEditModalOpen(true)
-                              }}
-                              title="편집"
-                            >
-                              <img src={editIcon} alt="편집" style={{ width: '24px', height: '24px' }} />
-                            </button>
-                            <button 
-                              type="button"
-                              className="slide-delete-btn"
-                              onClick={(e) => {
-                                e.stopPropagation()
-                                handleDeleteSlide(slide.id)
-                              }}
-                              title="삭제"
-                            >
-                              <img src={trashIcon} alt="삭제" style={{ width: '24px', height: '24px' }} />
-                            </button>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
+          <MainSlideSection
+            slides={slides}
+            onSlideToggle={handleSlideToggle}
+            onSlideMoveUp={moveSlideUp}
+            onSlideMoveDown={moveSlideDown}
+            onSlideDelete={handleDeleteSlide}
+            onSlideEdit={(slide) => {
+              setSelectedSlide(slide)
+              setIsSlideEditModalOpen(true)
+            }}
+            onSlideAdd={() => {
+              setSelectedSlide(null)
+              setIsSlideModalOpen(true)
+            }}
+            onRefresh={fetchSlides}
+          />
         )
       case 'books':
+        return (
+          <BooksSection
+            books={books}
+            loading={loading}
+            onBookAdd={() => setIsBookModalOpen(true)}
+            onBookEdit={(book) => {
+              setSelectedBook(book)
+              setIsBookModalOpen(true)
+            }}
+            onRefresh={fetchBooks}
+          />
+        )
+      case 'books-old':
         const filteredBooks = getFilteredBooks()
         const stats = getBookStats()
         return (
@@ -1983,6 +1615,25 @@ const AdminPage: React.FC = () => {
           </div>
         )
       case 'ad-management':
+        return (
+          <AdManagementSection
+            slides={slides}
+            onSlideToggle={handleSlideToggle}
+            onSlideMoveUp={moveSlideUp}
+            onSlideMoveDown={moveSlideDown}
+            onSlideDelete={handleDeleteSlide}
+            onSlideEdit={(slide) => {
+              setSelectedSlide(slide)
+              setIsSlideEditModalOpen(true)
+            }}
+            onSlideAdd={() => {
+              setSelectedSlide(null)
+              setIsSlideModalOpen(true)
+            }}
+            onRefresh={fetchSlides}
+          />
+        )
+      case 'ad-management-old':
         const activeAdSlides = slides.filter(slide => slide.isActive && slide.slideType === 'ad').sort((a, b) => a.order - b.order)
         const inactiveAdSlides = slides.filter(slide => !slide.isActive && slide.slideType === 'ad').sort((a, b) => a.order - b.order)
         
@@ -2219,11 +1870,21 @@ const AdminPage: React.FC = () => {
           </div>
         )
       case 'member-management':
+        return (
+          <MemberManagementSection
+            members={members}
+            loading={loading}
+            onMemberEdit={openEditModal}
+            onMemberDelete={handleDeleteMember}
+            onRefresh={fetchMembers}
+          />
+        )
+      case 'member-management-old':
         const filteredMembers = getFilteredMembers()
         return (
           <div className="member-management-page">
-            <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '20px' }}>
-              <h2 style={{ margin: 0 }}>👥 회원 관리</h2>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+              <h2 style={{ margin: 0, fontSize: '1.5rem' }}>👥 회원 관리</h2>
               <button 
                 onClick={async () => {
                   if (confirm('회원 데이터베이스를 최신 스키마로 업데이트하시겠습니까?')) {
@@ -2378,13 +2039,22 @@ const AdminPage: React.FC = () => {
           </div>
         )
       case 'review-management':
+        return (
+          <ReviewManagementSection
+            reviewApplications={reviewApplications}
+            loading={loading}
+            onApplicationsUpdate={setReviewApplications}
+            onRefresh={fetchReviewApplications}
+          />
+        )
+      case 'review-management-old':
         const filteredApplications = getFilteredApplications()
         const uniqueBookTitles = Array.from(new Set(reviewApplications.map(app => app.bookTitle))).sort()
         
         return (
           <div className="content-section">
-            <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '20px' }}>
-              <h2 style={{ margin: 0 }}>💬 서평 관리</h2>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+              <h2 style={{ margin: 0, fontSize: '1.5rem' }}>💬 서평 관리</h2>
               <button 
                 onClick={async () => {
                   if (confirm('서평 신청 데이터베이스를 최신 스키마로 업데이트하시겠습니까?')) {
@@ -2416,9 +2086,9 @@ const AdminPage: React.FC = () => {
                   style={{
                     display: 'flex',
                     alignItems: 'center',
-                    gap: '15px',
-                    marginBottom: '10px',
-                    padding: '8px 12px',
+                    gap: '8px',
+                    marginBottom: '5px',
+                    padding: '4px 6px',
                     background: '#f8f9fa',
                     borderRadius: '4px',
                     fontSize: '0.85rem'
@@ -2538,7 +2208,7 @@ const AdminPage: React.FC = () => {
                           fontSize="18"
                           fontWeight="bold"
                           fill="#21a366"
-                          fontFamily="Arial, sans-serif"
+                          fontFamily="Suite, sans-serif"
                           transform="rotate(-8 17 18)"
                         >
                           X
@@ -2568,7 +2238,7 @@ const AdminPage: React.FC = () => {
                     </span>
                   </div>
                 )}
-                <table className="review-applications-table" style={{ width: '1495px', tableLayout: 'fixed', borderCollapse: 'collapse' }}>
+                <table className="review-applications-table" style={{ width: '100%', maxWidth: '1400px', tableLayout: 'fixed', borderCollapse: 'collapse' }}>
                   <thead>
                     <tr>
                       <th>회원ID</th>
@@ -2711,11 +2381,11 @@ const AdminPage: React.FC = () => {
                               }}
                               placeholder="메모 입력..."
                               style={{
-                                width: '150px',
-                                padding: '4px 8px',
+                                width: '130px',
+                                padding: '2px 4px',
                                 border: '1px solid #ddd',
                                 borderRadius: '4px',
-                                fontSize: '0.85rem'
+                                fontSize: '0.625rem' // 10px
                               }}
                             />
                           </td>
@@ -2736,79 +2406,13 @@ const AdminPage: React.FC = () => {
 
   return (
     <div className="admin-page">
-      <header className="admin-header">
-        <div className="admin-nav">
-          <button className="hamburger-btn" onClick={toggleMobileMenu}>
-            ☰
-          </button>
-          <h1 style={{ 
-            position: 'absolute', 
-            left: '50%', 
-            transform: 'translateX(-50%)', 
-            zIndex: 1,
-            margin: 0,
-            fontSize: '1.5rem',
-            fontWeight: 600,
-            color: '#333'
-          }}>
-            {activeMenu === 'member-management' ? '회원 관리' : '관리자 페이지'}
-          </h1>
-          <div className="header-right">
-            {activeMenu === 'member-management' && (
-              <button 
-                className="add-member-btn" 
-                onClick={openSignupModal}
-                style={{
-                  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                  color: 'white',
-                  border: 'none',
-                  padding: '0.4rem 0.8rem',
-                  borderRadius: '4px',
-                  fontSize: '0.8rem',
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                  transition: 'all 0.3s ease',
-                  whiteSpace: 'nowrap',
-                  marginRight: '0.5rem'
-                }}
-              >
-                + 회원 추가
-              </button>
-            )}
-            <button className="logout-btn" onClick={handleLogout}>
-              로그아웃
-            </button>
-          </div>
-        </div>
-      </header>
-
-      {/* 모바일 메뉴 오버레이 */}
-      {isMobileMenuOpen && (
-        <div 
-          className="mobile-menu-overlay" 
-          onClick={() => setIsMobileMenuOpen(false)}
-        />
-      )}
-
       <div className="admin-layout">
-        <aside className={`admin-sidebar ${isMobileMenuOpen ? 'mobile-menu-open' : ''}`}>
-          <div className="sidebar-title">Admin</div>
-          <nav className="sidebar-nav">
-            {menuItems.map((item) => (
-              <button
-                key={item.id}
-                className={`nav-item ${activeMenu === item.id ? 'active' : ''}`}
-                onClick={() => {
-                  handleMenuClick(item.id)
-                  setIsMobileMenuOpen(false) // 모바일에서 메뉴 선택 시 닫기
-                }}
-              >
-                <span className="nav-icon">{item.icon}</span>
-                <span className="nav-label">{item.label}</span>
-              </button>
-            ))}
-          </nav>
-        </aside>
+        <AdminSidebar
+          activeMenu={activeMenu}
+          onMenuClick={handleMenuClick}
+          isMobileMenuOpen={isMobileMenuOpen}
+          onCloseMobileMenu={() => setIsMobileMenuOpen(false)}
+        />
 
         <main className="admin-main-content">
           {renderContent()}

@@ -39,6 +39,12 @@ const MemberEditModal: React.FC<MemberEditModalProps> = ({ isOpen, onClose, memb
   })
   const [loading, setLoading] = useState(false)
 
+  // URL에서 프로토콜 제거하는 함수
+  const removeProtocol = (url: string): string => {
+    if (!url) return ''
+    return url.replace(/^https?:\/\//i, '')
+  }
+
   // 모달이 열릴 때 회원 데이터로 폼 초기화
   useEffect(() => {
     if (member && isOpen) {
@@ -49,7 +55,7 @@ const MemberEditModal: React.FC<MemberEditModalProps> = ({ isOpen, onClose, memb
         phone: member.phone || '',
         email: member.email || '',
         address: member.address || '',
-        blog: member.blog || '',
+        blog: removeProtocol(member.blog || ''),
         instagram: member.instagram || '',
         isAdmin: member.isAdmin || member.level === 'admin' || false
       })
@@ -58,9 +64,11 @@ const MemberEditModal: React.FC<MemberEditModalProps> = ({ isOpen, onClose, memb
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value, type, checked } = e.target
+    // 블로그 필드의 경우 프로토콜 제거
+    const processedValue = name === 'blog' ? removeProtocol(value) : value
     setFormData(prev => ({
       ...prev,
-      [name]: type === 'checkbox' ? checked : value
+      [name]: type === 'checkbox' ? checked : processedValue
     }))
   }
 
@@ -192,11 +200,11 @@ const MemberEditModal: React.FC<MemberEditModalProps> = ({ isOpen, onClose, memb
               <input
                 id="blog"
                 name="blog"
-                type="url"
+                type="text"
                 value={formData.blog}
                 onChange={handleInputChange}
                 className="member-edit-input"
-                placeholder="https://"
+                placeholder="블로그 주소 (https:// 제외)"
               />
             </div>
 

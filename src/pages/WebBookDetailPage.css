@@ -1,0 +1,262 @@
+/* 웹 도서 상세 페이지 */
+.web-book-detail {
+  min-height: 100vh;
+  background-color: #ffffff;
+  color: #333333;
+  display: flex;
+  flex-direction: column;
+  max-width: 1200px;
+  width: 100%;
+  margin: 0 auto;
+  position: relative;
+  overflow-x: hidden;
+  font-family: 'Suite', sans-serif;
+}
+
+/* 로딩 및 에러 상태 */
+.loading-container,
+.error-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  padding: 20px;
+}
+
+.error-container button {
+  margin-top: 16px;
+  padding: 12px 24px;
+  background: #667eea;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 16px;
+}
+
+/* 웹 헤더 */
+.web-book-detail-header {
+  padding: 20px 40px;
+  background-color: #ffffff;
+  border-bottom: 1px solid #e5e7eb;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.back-button {
+  background: none;
+  border: none;
+  color: #667eea;
+  font-size: 16px;
+  cursor: pointer;
+  padding: 8px 16px;
+  border-radius: 8px;
+  transition: background 0.2s ease;
+}
+
+.back-button:hover {
+  background: #f3f4f6;
+}
+
+.web-book-detail-header h1 {
+  font-size: 24px;
+  font-weight: 700;
+  color: #1f2937;
+  margin: 0;
+  flex: 1;
+  text-align: center;
+}
+
+.purchase-button {
+  background: #667eea;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  transition: background 0.2s ease;
+}
+
+.purchase-button:hover {
+  background: #5568d3;
+}
+
+/* 웹 메인 컨텐츠 */
+.web-book-detail-main {
+  flex: 1;
+  padding: 40px;
+  max-width: 1200px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+.web-book-content-wrapper {
+  display: flex;
+  gap: 40px;
+  margin-bottom: 40px;
+  align-items: flex-start;
+}
+
+/* 책 표지 */
+.web-book-cover {
+  flex-shrink: 0;
+  width: 300px;
+  cursor: pointer;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.web-book-cover img {
+  width: 100%;
+  height: auto;
+  display: block;
+  object-fit: cover;
+}
+
+.book-image-placeholder {
+  width: 100%;
+  aspect-ratio: 2/3;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f3f4f6;
+  color: #9ca3af;
+  font-size: 14px;
+}
+
+/* 도서 정보 섹션 */
+.web-book-info-section {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.web-book-title {
+  font-size: 32px;
+  font-weight: 700;
+  color: #1f2937;
+  margin: 0 0 20px 0;
+}
+
+.web-book-info-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.web-info-label {
+  color: #6b7280;
+  font-weight: 400;
+  font-size: 16px;
+  min-width: 80px;
+}
+
+.web-info-value {
+  color: #1f2937;
+  font-weight: 600;
+  font-size: 16px;
+}
+
+.web-purchase-button,
+.web-review-button {
+  background: #667eea;
+  color: white;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 16px;
+  font-weight: 500;
+  transition: background 0.2s ease;
+  margin-top: 10px;
+  width: fit-content;
+}
+
+.web-purchase-button:hover,
+.web-review-button:hover {
+  background: #5568d3;
+}
+
+/* 도서 소개 섹션 */
+.web-book-description-section {
+  margin-top: 40px;
+  padding-top: 40px;
+  border-top: 1px solid #e5e7eb;
+}
+
+.web-book-description-title {
+  font-size: 24px;
+  font-weight: 700;
+  color: #1f2937;
+  margin: 0 0 20px 0;
+}
+
+.web-book-description-content {
+  font-size: 16px;
+  line-height: 1.8;
+  color: #4b5563;
+}
+
+.web-book-description-content p {
+  margin: 0 0 16px 0;
+}
+
+.web-book-description-content p:last-child {
+  margin-bottom: 0;
+}
+
+/* 전체 화면 이미지 뷰어 - 웹 */
+.web-full-image-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.95);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px;
+}
+
+.web-full-image-close {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  background: rgba(255, 255, 255, 0.2);
+  border: none;
+  color: #ffffff;
+  font-size: 32px;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1001;
+  transition: background 0.2s ease;
+}
+
+.web-full-image-close:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.web-full-image {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  border-radius: 8px;
+}
+

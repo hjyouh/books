@@ -1,0 +1,76 @@
+/* 모바일 헤더 공통 스타일 */
+.mobile-header {
+  padding: 12px 0 !important;
+  background-color: #2a2a2a;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 100;
+  width: 100%;
+  max-width: 100vw;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 0;
+  height: 50px;
+  box-sizing: border-box;
+}
+
+/* 웹 테스트용: 스마트폰 프레임 안에 맞춤 */
+body.mobile-view-active:not(.actual-mobile-device) .mobile-header {
+  max-width: 375px;
+  width: 375px;
+  left: 50%;
+  right: auto;
+  transform: translateX(-50%);
+}
+
+/* 실제 모바일 기기: 기기별 화면 너비에 맞춤 */
+body.mobile-view-active.actual-mobile-device .mobile-header {
+  max-width: 100vw;
+  width: 100%;
+  left: 0;
+  right: 0;
+  transform: none;
+}
+
+.mobile-header-back-button {
+  background: none;
+  border: none;
+  color: #ffffff;
+  font-size: 24px;
+  cursor: pointer;
+  padding: 4px 0 4px 10px !important;
+  margin: 0 !important;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.mobile-header-back-button img {
+  margin: 0 !important;
+  padding: 0 !important;
+  display: block;
+}
+
+.mobile-header-back-button:hover {
+  opacity: 0.8;
+}
+
+.mobile-header-title {
+  font-size: 20px; /* 기본값: 20px (도서 상세 페이지 등) */
+  font-weight: 700;
+  margin: 0;
+  padding: 0;
+  color: #A1C5FF;
+  line-height: 1.3;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: 'Suite', sans-serif;
+}
+

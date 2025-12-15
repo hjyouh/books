@@ -6,8 +6,12 @@ import { onAuthStateChanged, User, signOut } from 'firebase/auth'
 import NewSignupPage from './pages/NewSignupPage'
 import LoginPage from './pages/LoginPage'
 import AdminPage from './pages/AdminPage'
-import UserPage from './pages/UserPage'
-import BookDetailPage from './pages/BookDetailPage'
+import WebUserPage from './pages/WebUserPage'
+import MobileUserPage from './pages/MobileUserPage'
+import WebReviewManagementPage from './pages/WebReviewManagementPage'
+import MobileReviewManagementPage from './pages/MobileReviewManagementPage'
+import WebBookDetailPage from './pages/WebBookDetailPage'
+import MobileBookDetailPage from './pages/MobileBookDetailPage'
 import SimpleLoginModal from './components/SimpleLoginModal'
 import NewSignupModal from './components/NewSignupModal'
 import MobileSignupModal from './components/MobileSignupModal'
@@ -64,10 +68,15 @@ function App() {
   const [isAdmin, setIsAdmin] = useState(false)
   const [headerName, setHeaderName] = useState('사용자')
   const [isInitialLoad, setIsInitialLoad] = useState(true) // 초기 로딩 상태
-  const [deviceType, setDeviceType] = useState<'mobile' | 'web'>(() => getDeviceType()) // 디바이스 타입
+  const [deviceType, setDeviceType] = useState<'mobile' | 'web'>(() => {
+    // localStorage에서 모바일 뷰 설정 확인
+    const savedMobileView = localStorage.getItem('isMobileView')
+    if (savedMobileView === 'true') {
+      return 'mobile'
+    }
+    return getDeviceType()
+  }) // 디바이스 타입
   const [isActualMobile, setIsActualMobile] = useState(() => isActualMobileDevice()) // 실제 모바일 기기 여부
-  const [selectedBook, setSelectedBook] = useState<Book | null>(null)
-  const [isModalOpen, setIsModalOpen] = useState(false)
 
   // 디바이스 타입에 따라 body 클래스 설정
   useEffect(() => {
@@ -185,9 +194,10 @@ function App() {
           .sort((a, b) => a.order - b.order)
         
         // 디버깅: 슬라이드 개수 확인
-        console.log('전체 슬라이드:', slidesData.length)
-        console.log('슬라이드 데이터:', slidesData.map(s => ({ id: s.id, isActive: s.isActive, slideType: s.slideType, order: s.order })))
-        console.log('활성 메인 슬라이드:', activeMainSlides.length, activeMainSlides.map(s => ({ id: s.id, order: s.order })))
+        // 디버그 로그 제거 (프로덕션 환경에서 불필요)
+        // console.log('전체 슬라이드:', slidesData.length)
+        // console.log('슬라이드 데이터:', slidesData.map(s => ({ id: s.id, isActive: s.isActive, slideType: s.slideType, order: s.order })))
+        // console.log('활성 메인 슬라이드:', activeMainSlides.length, activeMainSlides.map(s => ({ id: s.id, order: s.order })))
         
         // 활성화된 광고 슬라이드만 필터링하고 정렬
         const activeAdSlides = slidesData
@@ -240,10 +250,12 @@ function App() {
   // 디바이스 타입 전환 핸들러
   const handleSwitchToMobile = () => {
     setDeviceType('mobile')
+    localStorage.setItem('isMobileView', 'true')
   }
 
   const handleSwitchToWeb = () => {
     setDeviceType('web')
+    localStorage.setItem('isMobileView', 'false')
   }
 
 
@@ -470,17 +482,25 @@ function App() {
         reviewBooks={reviewBooks}
         publishedBooks={publishedBooks}
         recommendedBooks={recommendedBooks}
-                user={user}
+        user={user}
         isAdmin={isAdmin}
         headerName={headerName}
-        selectedBook={selectedBook}
-        isModalOpen={isModalOpen}
-        setIsModalOpen={setIsModalOpen}
-        setSelectedBook={(book: Book | null) => setSelectedBook(book)}
         onLogout={handleLogout}
         onSwitchToMobile={handleSwitchToMobile}
       />
     )
+  }
+
+  const UserPage = () => {
+    return deviceType === 'mobile' ? <MobileUserPage /> : <WebUserPage />
+  }
+
+  const BookDetailPage = () => {
+    return deviceType === 'mobile' ? <MobileBookDetailPage /> : <WebBookDetailPage />
+  }
+
+  const ReviewManagementPage = () => {
+    return deviceType === 'mobile' ? <MobileReviewManagementPage /> : <WebReviewManagementPage />
   }
 
   return (
@@ -492,6 +512,7 @@ function App() {
         <Route path="/signup" element={<NewSignupPage />} />
         <Route path="/admin" element={<AdminPage />} />
         <Route path="/user" element={<UserPage />} />
+        <Route path="/reviews" element={<ReviewManagementPage />} />
       </Routes>
       
       {/* 모바일 로그인 모달 */}

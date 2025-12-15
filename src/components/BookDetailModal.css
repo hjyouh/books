@@ -9,20 +9,23 @@
   align-items: center;
   justify-content: center;
   z-index: 2000;
-  padding: 20px;
+  padding: 10px; /* 패딩 줄임: 20px → 10px */
 }
 
 .book-detail-modal {
   background: white;
   border-radius: 12px;
   box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
-  max-width: 1000px; /* 더 넓게: 800px → 1000px */
-  width: 100%;
-  max-height: 90vh;
-  overflow-y: auto; /* 스크롤 가능하도록 */
-  overflow-x: hidden;
+  width: 900px;
+  height: fit-content; /* 콘텐츠에 맞게 높이 조정 - 하단 빈 공간 제거 */
+  max-width: 900px;
+  max-height: 700px; /* 최대 높이 제한 */
+  overflow: hidden; /* 모달 자체는 스크롤 없음 */
   position: relative;
   animation: modalSlideIn 0.3s ease-out;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch; /* 하단 공간 제거 */
 }
 
 @keyframes modalSlideIn {
@@ -62,23 +65,29 @@
 
 .book-detail-content {
   display: flex;
-  min-height: 500px;
+  min-height: 0; /* 최소 높이 0으로 설정 */
+  height: auto; /* 콘텐츠에 맞게 높이 조정 */
   gap: 0;
+  align-items: stretch; /* 양쪽 섹션이 같은 높이를 가지도록 */
 }
 
 .book-cover-section {
   flex: 0 0 450px; /* 더 넓게: 350px → 450px */
-  padding: 10px; /* 패딩을 10px로 축소 */
+  padding-top: 40px; /* 상단 패딩 */
+  padding-bottom: 40px; /* 하단 패딩 - 상단과 동일 */
+  padding-left: 5px;
+  padding-right: 5px;
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center; /* 중앙 정렬 */
+  justify-content: center; /* 세로 가운데 정렬 */
   background: #ffffff; /* 흰색 배경으로 변경 */
   border-right: 1px solid #e5e7eb;
+  align-self: stretch; /* 부모 높이에 맞춤 - 양쪽 섹션 같은 높이 */
 }
 
 .book-cover-image {
-  width: calc(100% - 20px); /* 좌우 패딩 고려하여 약간 작게 */
+  width: calc(100% - 10px); /* 패딩 줄임에 따라 조정: 20px → 10px */
   max-width: 100%; /* 최대 너비 제한 제거 */
   height: auto; /* 높이 자동 */
   aspect-ratio: 3 / 4; /* 3:4 비율 유지 */
@@ -141,28 +150,181 @@
 
 .book-details-section {
   flex: 1;
-  padding: 40px 40px; /* 패딩 증가: 30px → 40px */
-  overflow-y: auto;
+  padding-top: 40px; /* 책 제목 상단 패딩 */
+  padding-right: 20px; /* 우측 패딩 20px */
+  padding-left: 20px;
+  padding-bottom: 40px; /* 하단 패딩 40px */
+  overflow: hidden; /* 스크롤 제거 */
   background: #ffffff;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start; /* 상단 정렬 */
+  align-items: stretch;
+  min-height: 0;
+  align-self: stretch; /* 부모 높이에 맞춤 - 양쪽 섹션 같은 높이 */
+  position: relative; /* 서평 신청 버튼 절대 위치 기준 */
 }
 
 
 .detail-item {
-  margin-bottom: 28px; /* 간격 증가: 24px → 28px */
+  margin-bottom: 16px; /* 간격 줄임: 20px → 16px */
+  text-align: left;
+}
+
+/* category-item 다음 첫 번째 detail-item (책 제목)을 상단으로 올림 */
+.detail-item.category-item + .detail-item {
+  margin-top: 0;
+  margin-bottom: 16px;
+}
+
+/* 한 줄로 표시되는 필드 */
+.detail-item-inline {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px; /* 간격 줄임: 20px → 12px */
+}
+
+.detail-label {
+  font-size: 15px;
+  font-weight: 400;
+  color: #4b5563;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.detail-value {
+  font-size: 15px;
+  font-weight: 700;
+  color: #1f2937;
+  flex: 1;
+  word-break: break-word;
+}
+
+/* 책 제목 값만 20px로 유지 (라벨은 15px 유지) */
+.book-title-item .detail-value {
+  font-size: 20px;
+}
+
+/* 구매 링크 필드 */
+.detail-item-link {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  justify-content: space-between;
+}
+
+.detail-item-link .detail-value {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.purchase-link-button {
+  background: #2563eb;
+  color: white;
+  text-decoration: none;
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 600;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: background-color 0.2s;
+}
+
+.purchase-link-button:hover {
+  background: #1d4ed8;
+  text-decoration: none;
+}
+
+/* 도서 구분은 우측 상단에 고정 */
+.detail-item.category-item {
+  position: absolute;
+  top: 16px;
+  right: 40px;
+  margin: 0;
+  z-index: 5;
+  display: block;
+}
+
+.category-label {
+  display: inline-block;
+  background: #e0f2fe;
+  color: #0369a1;
+  padding: 6px 16px;
+  border-radius: 20px;
+  font-size: 14px;
+  font-weight: 600;
 }
 
 .detail-item h4 {
-  font-size: 16px;
-  font-weight: 600;
-  color: #1f2937; /* 더 진하게: #374151 → #1f2937 */
-  margin: 0 0 12px 0; /* 간격 증가: 8px → 12px */
+  font-size: 15px; /* 16px → 15px */
+  font-weight: 400; /* 보통체: 600 → 400 */
+  color: #1f2937;
+  margin: 0 0 12px 0;
+  text-align: left;
 }
 
 .detail-item p {
-  font-size: 15px; /* 더 크게: 14px → 15px */
-  color: #4b5563; /* 더 진하게: #6b7280 → #4b5563 */
+  font-size: 15px;
+  color: #4b5563;
   margin: 0;
-  line-height: 1.6; /* 줄간격 증가: 1.5 → 1.6 */
+  line-height: 1.6;
+  text-align: left;
+}
+
+/* 도서 설명 영역 - 서평 신청 버튼 포함 */
+.description-item {
+  flex: 1; /* 남은 공간을 모두 채우도록 */
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  margin-bottom: 0; /* 하단 여백 제거 */
+}
+
+.description-content {
+  flex: 1; /* 남은 공간을 모두 채우도록 */
+  overflow-y: auto;
+  overflow-x: hidden;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 12px;
+  background: #f9fafb;
+  min-height: calc(1.6em * 2 + 24px); /* 최소 2줄 높이 */
+  margin-bottom: 12px; /* 서평 신청 버튼과의 간격 */
+  /* 마우스 휠 스크롤 지원 */
+  scroll-behavior: smooth;
+}
+
+.description-text {
+  font-size: 15px;
+  font-weight: 400; /* 일반체 */
+  color: #4b5563;
+  line-height: 1.6;
+  margin: 0;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+}
+
+/* 스크롤바 스타일링 */
+.description-content::-webkit-scrollbar {
+  width: 8px;
+}
+
+.description-content::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 4px;
+}
+
+.description-content::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+}
+
+.description-content::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
 }
 
 .hashtags {
@@ -184,10 +346,68 @@
 .modal-actions {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: 12px;
   margin-top: 30px;
   padding-top: 20px;
   border-top: 1px solid #e5e7eb;
+}
+
+.action-buttons-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.like-btn {
+  background: #f3f4f6;
+  color: #374151;
+  border: 1px solid #d1d5db;
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.like-btn:hover {
+  background: #e5e7eb;
+  border-color: #9ca3af;
+}
+
+.like-btn.liked {
+  background: #fee2e2;
+  color: #dc2626;
+  border-color: #fca5a5;
+}
+
+.like-btn.liked:hover {
+  background: #fecaca;
+  border-color: #f87171;
+}
+
+.comment-btn {
+  background: #f3f4f6;
+  color: #374151;
+  border: 1px solid #d1d5db;
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.comment-btn:hover {
+  background: #e5e7eb;
+  border-color: #9ca3af;
 }
 
 .review-apply-btn {
@@ -200,31 +420,165 @@
   font-weight: 600;
   cursor: pointer;
   transition: background-color 0.2s;
+  position: relative; /* relative 위치 */
+  align-self: flex-end; /* 우측 정렬 */
+  margin-top: 0; /* 상단 여백 제거 */
+  margin-bottom: 0; /* 하단 여백 제거 */
+  margin-right: 0; /* 우측 여백 제거 - padding-right로 처리 */
+  z-index: 10;
 }
 
 .review-apply-btn:hover {
   background: #1d4ed8;
 }
 
-.add-to-favorites-btn {
+/* 댓글 입력창 */
+.comment-input-section {
+  margin-top: 20px;
+  padding-top: 20px;
+  border-top: 1px solid #e5e7eb;
+}
+
+.comment-input {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  font-size: 14px;
+  font-family: 'Suite', sans-serif;
+  resize: vertical;
+  min-height: 60px;
+  max-height: 80px;
+  line-height: 1.5;
+  margin-bottom: 12px;
+  box-sizing: border-box;
+}
+
+.comment-input:focus {
+  outline: none;
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+.comment-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.comment-submit-btn {
   background: #2563eb;
   color: white;
   border: none;
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  font-size: 20px;
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.comment-submit-btn:hover {
+  background: #1d4ed8;
+}
+
+.comment-cancel-btn {
+  background: #f3f4f6;
+  color: #374151;
+  border: 1px solid #d1d5db;
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-size: 14px;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s;
+}
+
+.comment-cancel-btn:hover {
+  background: #e5e7eb;
+  border-color: #9ca3af;
+}
+
+/* 댓글 목록 */
+.comments-list {
+  margin-top: 20px;
+  padding-top: 20px;
+  border-top: 1px solid #e5e7eb;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-height: calc(1.5em * 5 + 12px * 4 + 20px); /* 5개 댓글 높이 + gap */
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.comment-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 10px;
+  background: #f9fafb;
+  border-radius: 8px;
+  font-size: 14px;
+  position: relative;
+  flex-shrink: 0;
+}
+
+.comment-user-id {
+  color: #6b7280;
+  font-weight: 600;
+  flex-shrink: 0;
+  min-width: 80px;
+}
+
+.comment-text {
+  color: #1f2937;
+  flex: 1;
+  word-break: break-word;
+  line-height: 1.5;
+}
+
+.comment-delete-btn {
+  background: transparent;
+  border: none;
+  color: #dc2626;
+  font-size: 20px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0;
+  width: 24px;
+  height: 24px;
   display: flex;
   align-items: center;
   justify-content: center;
+  border-radius: 4px;
+  transition: all 0.2s;
+  flex-shrink: 0;
+  line-height: 1;
 }
 
-.add-to-favorites-btn:hover {
-  background: #1d4ed8;
-  transform: scale(1.05);
+.comment-delete-btn:hover {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+/* 댓글 목록 스크롤바 스타일 */
+.comments-list::-webkit-scrollbar {
+  width: 6px;
+}
+
+.comments-list::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 3px;
+}
+
+.comments-list::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 3px;
+}
+
+.comments-list::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
 }
 
 /* 반응형 디자인 */
@@ -234,6 +588,9 @@
   }
   
   .book-detail-modal {
+    width: 100%;
+    max-width: 100%;
+    height: auto;
     max-height: 95vh;
   }
   
@@ -255,20 +612,28 @@
   }
   
   .book-details-section {
-    padding: 20px;
+    padding: 20px 20px; /* 패딩 줄임: 40px → 20px */
+    padding-bottom: 20px; /* 서평 신청 버튼 공간 - 상단 패딩과 동일 */
+  }
+  
+  /* 모바일에서도 서평도서 버튼 위치 조정 */
+  .detail-item.category-item {
+    top: 12px;
+    right: 20px;
   }
   
   .book-title-header h2 {
     font-size: 20px;
   }
   
-  .modal-actions {
-    flex-direction: column;
-    align-items: stretch;
+  .review-apply-btn {
+    bottom: 20px; /* 상단 패딩과 동일한 사이즈 */
+    right: 20px;
+    width: auto;
   }
   
-  .review-apply-btn {
-    width: 100%;
+  .description-content {
+    margin-bottom: 50px; /* 서평 신청 버튼 공간 확보 */
   }
   
   .add-to-favorites-btn {

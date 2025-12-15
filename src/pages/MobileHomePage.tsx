@@ -1,10 +1,17 @@
-import React, { useState, useRef } from 'react'
+import React, { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { doc, getDoc } from 'firebase/firestore'
-import { db } from '../firebase'
 import { User } from 'firebase/auth'
 import { Book } from '../App'
+import { Carousel } from 'react-bootstrap'
 import './MobileHomePage.css'
+// 아이콘 이미지 import
+import mobileMenuIcon from '../assets/icons/mobile-menu-white.png'
+import browserIcon from '../assets/icons/browser-white.png'
+import dashboardIcon from '../assets/icons/dashboard.png'
+import logInIcon from '../assets/icons/log-in.png'
+import logOutIcon from '../assets/icons/log-out.png'
+import leftWhiteIcon from '../assets/icons/left-white.png'
+import rightWhiteIcon from '../assets/icons/right-white.png'
 
 interface Slide {
   id: string;
@@ -56,66 +63,13 @@ const MobileHomePage: React.FC<MobileHomePageProps> = ({
   const navigate = useNavigate()
   const [currentSlideIndex, setCurrentSlideIndex] = useState(0)
   const [currentAdSlideIndex, setCurrentAdSlideIndex] = useState(0)
-  const [touchStart, setTouchStart] = useState<number | null>(null)
-  const [touchEnd, setTouchEnd] = useState<number | null>(null)
-  const [isDragging, setIsDragging] = useState(false)
-  const [dragOffset, setDragOffset] = useState(0)
-  const heroCarouselRef = useRef<HTMLElement | null>(null)
-
-  // 터치 시작
-  const handleTouchStart = (e: React.TouchEvent) => {
-    e.preventDefault()
-    e.stopPropagation()
-    setTouchEnd(null)
-    setTouchStart(e.targetTouches[0].clientX)
-    setIsDragging(true)
-    setDragOffset(0)
-  }
-
-  // 터치 이동
-  const handleTouchMove = (e: React.TouchEvent) => {
-    if (!touchStart) return
-    e.preventDefault()
-    e.stopPropagation()
-    const currentTouch = e.targetTouches[0].clientX
-    const diff = touchStart - currentTouch
-    setDragOffset(diff)
-    setTouchEnd(currentTouch)
-  }
-
-  // 터치 종료
-  const handleTouchEnd = () => {
-    if (!touchStart) {
-      setIsDragging(false)
-      setDragOffset(0)
-      return
-    }
-
-    if (touchEnd === null) {
-      setIsDragging(false)
-      setDragOffset(0)
-      setTouchStart(null)
-      return
-    }
-
-    const distance = touchStart - touchEnd
-    const isLeftSwipe = distance > 50
-    const isRightSwipe = distance < -50
-
-    if (isLeftSwipe && slides) {
-      setCurrentSlideIndex((prevIndex) => (prevIndex + 1) % slides.length)
-    }
-    if (isRightSwipe && slides) {
-      setCurrentSlideIndex((prevIndex) => 
-        prevIndex === 0 ? slides.length - 1 : prevIndex - 1
-      )
-    }
-
-    setIsDragging(false)
-    setDragOffset(0)
-    setTouchStart(null)
-    setTouchEnd(null)
-  }
+  // 도서 섹션 스크롤 위치 추적
+  const reviewBooksRef = React.useRef<HTMLDivElement | null>(null)
+  const publishedBooksRef = React.useRef<HTMLDivElement | null>(null)
+  const recommendedBooksRef = React.useRef<HTMLDivElement | null>(null)
+  const [reviewBooksScroll, setReviewBooksScroll] = React.useState({ canScrollLeft: false, canScrollRight: false })
+  const [publishedBooksScroll, setPublishedBooksScroll] = React.useState({ canScrollLeft: false, canScrollRight: false })
+  const [recommendedBooksScroll, setRecommendedBooksScroll] = React.useState({ canScrollLeft: false, canScrollRight: false })
 
   // 슬라이드 클릭 핸들러
   const handleSlideClick = async (slide: Slide) => {
@@ -146,6 +100,80 @@ const MobileHomePage: React.FC<MobileHomePageProps> = ({
     }
   }
 
+  // HTML 태그 제거 함수
+  const stripHtmlTags = (html: string | undefined): string => {
+    if (!html) return ''
+    // HTML 태그를 정규식으로 제거
+    return html.replace(/<[^>]*>/g, '').trim()
+  }
+
+  // 도서 섹션 스크롤 가능 여부 확인 함수
+  const checkScrollable = (container: HTMLDivElement | null, setState: (state: { canScrollLeft: boolean, canScrollRight: boolean }) => void) => {
+    if (!container) return
+    const { scrollLeft, scrollWidth, clientWidth } = container
+    // 스크롤이 가능한지 확인 (스크롤 가능한 너비가 실제 보이는 너비보다 큰지)
+    const isScrollable = scrollWidth > clientWidth
+    setState({
+      canScrollLeft: isScrollable && scrollLeft > 1, // 1px 여유를 둠 (반올림 오차 방지)
+      canScrollRight: isScrollable && scrollLeft < scrollWidth - clientWidth - 1
+    })
+  }
+
+  // 도서 섹션 스크롤 핸들러
+  const handleBookSectionScroll = (section: 'review' | 'published' | 'recommended') => {
+    const refs = {
+      review: reviewBooksRef,
+      published: publishedBooksRef,
+      recommended: recommendedBooksRef
+    }
+    const setters = {
+      review: setReviewBooksScroll,
+      published: setPublishedBooksScroll,
+      recommended: setRecommendedBooksScroll
+    }
+    checkScrollable(refs[section].current, setters[section])
+  }
+
+  // 도서 섹션 스크롤 함수
+  const scrollBookSection = (section: 'review' | 'published' | 'recommended', direction: 'left' | 'right') => {
+    const refs = {
+      review: reviewBooksRef,
+      published: publishedBooksRef,
+      recommended: recommendedBooksRef
+    }
+    const container = refs[section].current
+    if (!container) return
+    
+    const scrollAmount = 300 // 한 번에 스크롤할 거리
+    const newScrollLeft = direction === 'left' 
+      ? container.scrollLeft - scrollAmount 
+      : container.scrollLeft + scrollAmount
+    
+    container.scrollTo({ left: newScrollLeft, behavior: 'smooth' })
+    
+    // 스크롤 후 상태 업데이트
+    setTimeout(() => handleBookSectionScroll(section), 100)
+  }
+
+  // 컴포넌트 마운트 및 도서 데이터 변경 시 스크롤 가능 여부 확인
+  React.useEffect(() => {
+    const checkAllSections = () => {
+      // DOM이 완전히 렌더링된 후 확인
+      setTimeout(() => {
+        checkScrollable(reviewBooksRef.current, setReviewBooksScroll)
+        checkScrollable(publishedBooksRef.current, setPublishedBooksScroll)
+        checkScrollable(recommendedBooksRef.current, setRecommendedBooksScroll)
+      }, 200)
+    }
+    
+    // 초기 확인
+    checkAllSections()
+    
+    // 리사이즈 시 재확인
+    window.addEventListener('resize', checkAllSections)
+    return () => window.removeEventListener('resize', checkAllSections)
+  }, [reviewBooks, publishedBooks, recommendedBooks])
+
   return (
     <div className="publishing-website mobile-viewport">
       {/* 헤더 */}
@@ -158,16 +186,14 @@ const MobileHomePage: React.FC<MobileHomePageProps> = ({
             style={{
               background: 'none',
               border: 'none',
-              padding: '8px',
+              padding: '0',
               cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center'
             }}
           >
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M3 12H21M3 6H21M3 18H21" stroke="#ffffff" strokeWidth="2" strokeLinecap="round"/>
-            </svg>
+            <img src={mobileMenuIcon} alt="메뉴" style={{ width: '24px', height: '24px' }} />
           </button>
           <div className="mobile-header-title">
             <h1 style={{ fontSize: '18px', margin: 0, fontWeight: 700, color: '#ffffff', lineHeight: 1.2 }}>도서 출판</h1>
@@ -178,14 +204,13 @@ const MobileHomePage: React.FC<MobileHomePageProps> = ({
             aria-label="웹 뷰로 전환"
             title="웹 뷰로 전환"
             style={{
-              background: 'rgba(255, 255, 255, 0.2)',
-              border: '1px solid rgba(255, 255, 255, 0.3)',
-              color: '#ffffff'
+              background: 'none',
+              border: 'none',
+              padding: '0',
+              cursor: 'pointer'
             }}
           >
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M4 6H20V4H4C2.9 4 2 4.9 2 6V18C2 19.1 2.9 20 4 20H8V18H4V6ZM20 8H8C6.9 8 6 8.9 6 10V20C6 21.1 6.9 22 8 22H20C21.1 22 22 21.1 22 20V10C22 8.9 21.1 8 20 8ZM20 20H8V10H20V20Z" fill="currentColor"/>
-            </svg>
+            <img src={browserIcon} alt="웹 뷰" style={{ width: '24px', height: '24px' }} />
           </button>
           {/* 모바일 사이드바 메뉴 */}
           <div 
@@ -202,6 +227,7 @@ const MobileHomePage: React.FC<MobileHomePageProps> = ({
                     onLoginClick()
                   }}
                 >
+                  <img src={logInIcon} alt="로그인" style={{ width: '36px', height: '36px', marginRight: '8px', verticalAlign: 'middle' }} />
                   로그인
                 </button>
               )}
@@ -223,6 +249,7 @@ const MobileHomePage: React.FC<MobileHomePageProps> = ({
                       className="mobile-menu-item"
                       onClick={() => setIsMobileMenuOpen(false)}
                     >
+                      <img src={dashboardIcon} alt="관리자" style={{ width: '36px', height: '36px', marginRight: '8px', verticalAlign: 'middle' }} />
                       관리자
                     </Link>
                   )}
@@ -233,6 +260,7 @@ const MobileHomePage: React.FC<MobileHomePageProps> = ({
                       onLogout()
                     }}
                   >
+                    <img src={logOutIcon} alt="로그아웃" style={{ width: '36px', height: '36px', marginRight: '8px', verticalAlign: 'middle' }} />
                     로그아웃
                   </button>
                 </>
@@ -254,41 +282,21 @@ const MobileHomePage: React.FC<MobileHomePageProps> = ({
       >
       {/* 메인 캐러셀 - 메인슬라이드 */}
       {slides && slides.length > 0 ? (
-        <section 
-          ref={heroCarouselRef}
-          className="hero-carousel card-slider"
-          onTouchStart={handleTouchStart}
-          onTouchMove={handleTouchMove}
-          onTouchEnd={handleTouchEnd}
-          style={{
-            touchAction: 'pan-x',
-            overscrollBehavior: 'contain',
-            WebkitOverflowScrolling: 'touch'
-          }}
-        >
-          <div 
-            className="carousel-container card-slider-container"
-            style={{
-              overscrollBehavior: 'contain',
-              overscrollBehaviorX: 'contain',
-              overscrollBehaviorY: 'none',
-              touchAction: 'pan-x'
-            }}
+        <section className="hero-carousel card-slider">
+          <Carousel
+            activeIndex={currentSlideIndex}
+            onSelect={(selectedIndex: number) => setCurrentSlideIndex(selectedIndex)}
+            controls={slides.length > 1}
+            indicators={slides.length > 1}
+            interval={null}
+            touch={true}
+            className="mobile-main-carousel"
           >
-            {slides.map((slide, index) => {
-              const isActive = index === currentSlideIndex
-              const isPrev = index === (currentSlideIndex - 1 + slides.length) % slides.length
-              const isNext = index === (currentSlideIndex + 1) % slides.length
-              
-              return (
+            {slides.map((slide, index) => (
+              <Carousel.Item key={`${slide.id}-${index}`}>
                 <div
-                  key={`${slide.id}-${index}`}
-                  className={`carousel-slide ${isActive ? 'active' : ''} ${isPrev ? 'prev' : ''} ${isNext ? 'next' : ''}`}
-                  onClick={() => {
-                    if (!isDragging && Math.abs(dragOffset) < 10) {
-                      handleSlideClick(slide)
-                    }
-                  }}
+                  className="carousel-slide"
+                  onClick={() => handleSlideClick(slide)}
                   style={{ cursor: slide.linkUrl ? 'pointer' : 'default' }}
                 >
                   <div className="slide-content">
@@ -316,9 +324,9 @@ const MobileHomePage: React.FC<MobileHomePageProps> = ({
                     </div>
                   </div>
                 </div>
-              )
-            })}
-          </div>
+              </Carousel.Item>
+            ))}
+          </Carousel>
         </section>
       ) : null}
 
@@ -329,7 +337,11 @@ const MobileHomePage: React.FC<MobileHomePageProps> = ({
             <h2>서평도서</h2>
           </div>
           <div className={`books-carousel ${reviewBooks.length === 1 ? 'single-carousel' : ''}`}>
-            <div className={`books-container mobile-books-container ${reviewBooks.length === 1 ? 'single-card-container' : ''}`}>
+            <div 
+              className={`books-container mobile-books-container ${reviewBooks.length === 1 ? 'single-card-container' : ''}`}
+              ref={reviewBooksRef}
+              onScroll={() => handleBookSectionScroll('review')}
+            >
               {reviewBooks.slice(0, 6).map((book, index) => (
                 <div key={book.id || index} className="book-card mobile-book-card" onClick={() => handleBookClick(book)}>
                   <div className="mobile-book-card-content">
@@ -339,28 +351,51 @@ const MobileHomePage: React.FC<MobileHomePageProps> = ({
                       <div className="mobile-placeholder-cover">책 이미지</div>
                     )}
                     <div className="mobile-book-overlay">
-                      <div className="mobile-book-author">{book.author}</div>
                       <div className="mobile-book-info">
-                        <h3 className="mobile-book-title">{book.title}</h3>
-                        <p className="mobile-book-subtitle">{book.description ? book.description.substring(0, 30) + '...' : '부제'}</p>
+                        <h3 className="mobile-book-title">{stripHtmlTags(book.title)}</h3>
+                        <div className="mobile-book-author">{stripHtmlTags(book.author)}</div>
                       </div>
                     </div>
                   </div>
                 </div>
               ))}
             </div>
+            {(reviewBooksScroll.canScrollLeft || reviewBooksScroll.canScrollRight) && (
+              <div className="carousel-arrows">
+                {reviewBooksScroll.canScrollLeft && (
+                  <button 
+                    className="arrow-left" 
+                    onClick={() => scrollBookSection('review', 'left')}
+                  >
+                    <img src={leftWhiteIcon} alt="이전" />
+                  </button>
+                )}
+                {reviewBooksScroll.canScrollRight && (
+                  <button 
+                    className="arrow-right" 
+                    onClick={() => scrollBookSection('review', 'right')}
+                  >
+                    <img src={rightWhiteIcon} alt="다음" />
+                  </button>
+                )}
+              </div>
+            )}
           </div>
         </section>
       )}
 
       {/* 출간도서 섹션 */}
       {publishedBooks.length > 0 && (
-        <section className={`book-section mobile-book-section ${publishedBooks.length === 1 ? 'single-book-section' : ''}`}>
+        <section className={`book-section mobile-book-section published-books-section ${publishedBooks.length === 1 ? 'single-book-section' : ''}`}>
           <div className="section-header">
             <h2>출간도서</h2>
           </div>
           <div className={`books-carousel ${publishedBooks.length === 1 ? 'single-carousel' : ''}`}>
-            <div className={`books-container mobile-books-container ${publishedBooks.length === 1 ? 'single-card-container' : ''}`}>
+            <div 
+              className={`books-container mobile-books-container ${publishedBooks.length === 1 ? 'single-card-container' : ''}`}
+              ref={publishedBooksRef}
+              onScroll={() => handleBookSectionScroll('published')}
+            >
               {publishedBooks.slice(0, 6).map((book, index) => (
                 <div key={book.id || index} className="book-card mobile-book-card" onClick={() => handleBookClick(book)}>
                   <div className="mobile-book-card-content">
@@ -370,16 +405,35 @@ const MobileHomePage: React.FC<MobileHomePageProps> = ({
                       <div className="mobile-placeholder-cover">책 이미지</div>
                     )}
                     <div className="mobile-book-overlay">
-                      <div className="mobile-book-author">{book.author}</div>
                       <div className="mobile-book-info">
-                        <h3 className="mobile-book-title">{book.title}</h3>
-                        <p className="mobile-book-subtitle">{book.description ? book.description.substring(0, 30) + '...' : '부제'}</p>
+                        <h3 className="mobile-book-title">{stripHtmlTags(book.title)}</h3>
+                        <div className="mobile-book-author">{stripHtmlTags(book.author)}</div>
                       </div>
                     </div>
                   </div>
                 </div>
               ))}
             </div>
+            {(publishedBooksScroll.canScrollLeft || publishedBooksScroll.canScrollRight) && (
+              <div className="carousel-arrows">
+                {publishedBooksScroll.canScrollLeft && (
+                  <button 
+                    className="arrow-left" 
+                    onClick={() => scrollBookSection('published', 'left')}
+                  >
+                    <img src={leftWhiteIcon} alt="이전" />
+                  </button>
+                )}
+                {publishedBooksScroll.canScrollRight && (
+                  <button 
+                    className="arrow-right" 
+                    onClick={() => scrollBookSection('published', 'right')}
+                  >
+                    <img src={rightWhiteIcon} alt="다음" />
+                  </button>
+                )}
+              </div>
+            )}
           </div>
         </section>
       )}
@@ -439,8 +493,9 @@ const MobileHomePage: React.FC<MobileHomePageProps> = ({
                       prevIndex === 0 ? adSlides.length - 1 : prevIndex - 1
                     )
                   }}
+                  style={{ background: 'none', border: 'none', padding: '0', cursor: 'pointer' }}
                 >
-                  ‹
+                  <img src={leftWhiteIcon} alt="이전" style={{ width: '24px', height: '24px' }} />
                 </button>
                 <button 
                   className="carousel-next"
@@ -451,8 +506,9 @@ const MobileHomePage: React.FC<MobileHomePageProps> = ({
                       (prevIndex + 1) % adSlides.length
                     )
                   }}
+                  style={{ background: 'none', border: 'none', padding: '0', cursor: 'pointer' }}
                 >
-                  ›
+                  <img src={rightWhiteIcon} alt="다음" style={{ width: '24px', height: '24px' }} />
                 </button>
               </div>
               <div className="carousel-dots">
@@ -483,7 +539,11 @@ const MobileHomePage: React.FC<MobileHomePageProps> = ({
             <h2>추천도서</h2>
           </div>
           <div className={`books-carousel ${recommendedBooks.length === 1 ? 'single-carousel' : ''}`}>
-            <div className={`books-container mobile-books-container ${recommendedBooks.length === 1 ? 'single-card-container' : ''}`}>
+            <div 
+              className={`books-container mobile-books-container ${recommendedBooks.length === 1 ? 'single-card-container' : ''}`}
+              ref={recommendedBooksRef}
+              onScroll={() => handleBookSectionScroll('recommended')}
+            >
               {recommendedBooks.slice(0, 6).map((book, index) => (
                 <div key={book.id || index} className="book-card mobile-book-card" onClick={() => handleBookClick(book)}>
                   <div className="mobile-book-card-content">
@@ -493,16 +553,35 @@ const MobileHomePage: React.FC<MobileHomePageProps> = ({
                       <div className="mobile-placeholder-cover">책 이미지</div>
                     )}
                     <div className="mobile-book-overlay">
-                      <div className="mobile-book-author">{book.author}</div>
                       <div className="mobile-book-info">
-                        <h3 className="mobile-book-title">{book.title}</h3>
-                        <p className="mobile-book-subtitle">{book.description ? book.description.substring(0, 30) + '...' : '부제'}</p>
+                        <h3 className="mobile-book-title">{stripHtmlTags(book.title)}</h3>
+                        <div className="mobile-book-author">{stripHtmlTags(book.author)}</div>
                       </div>
                     </div>
                   </div>
                 </div>
               ))}
             </div>
+            {(recommendedBooksScroll.canScrollLeft || recommendedBooksScroll.canScrollRight) && (
+              <div className="carousel-arrows">
+                {recommendedBooksScroll.canScrollLeft && (
+                  <button 
+                    className="arrow-left" 
+                    onClick={() => scrollBookSection('recommended', 'left')}
+                  >
+                    <img src={leftWhiteIcon} alt="이전" />
+                  </button>
+                )}
+                {recommendedBooksScroll.canScrollRight && (
+                  <button 
+                    className="arrow-right" 
+                    onClick={() => scrollBookSection('recommended', 'right')}
+                  >
+                    <img src={rightWhiteIcon} alt="다음" />
+                  </button>
+                )}
+              </div>
+            )}
           </div>
         </section>
       )}

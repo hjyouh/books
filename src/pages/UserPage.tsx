@@ -1,8 +1,9 @@
-import { useEffect, useRef, useState, KeyboardEvent } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { onAuthStateChanged, updateProfile, User } from 'firebase/auth';
 import { collection, doc, getDoc, onSnapshot, query, updateDoc, where, QueryDocumentSnapshot, QuerySnapshot } from 'firebase/firestore';
 import { auth, db } from '../firebase';
+import MobileHeader from '../components/MobileHeader';
 import './UserPage.css';
 
 interface UserProfile {
@@ -16,7 +17,6 @@ interface UserProfile {
   instagram?: string;
   level?: string;
   createdAt?: any;
-  avatarUrl?: string;
 }
 
 type ReviewStatus = '서평신청' | '도서발송' | '서평대기' | '서평완료';
@@ -54,11 +54,7 @@ const initialStats: ReviewStats = {
   completed: 0,
 };
 
-declare global {
-  interface Window {
-    cloudinary?: any;
-  }
-}
+// Cloudinary 타입은 다른 파일에서 선언됨
 
 const UserPage: React.FC = () => {
   const navigate = useNavigate();
@@ -73,7 +69,21 @@ const UserPage: React.FC = () => {
   const [reviewApplications, setReviewApplications] = useState<UserReviewApplication[]>([]);
   const [reviewStats, setReviewStats] = useState<ReviewStats>(initialStats);
   const [reviewLoading, setReviewLoading] = useState(true);
-  const widgetRef = useRef<any>(null);
+  const [isMobile, setIsMobile] = useState(false);
+  const [isEditable, setIsEditable] = useState(false);
+
+  useEffect(() => {
+    const checkMobile = () => {
+      const isMobileView = document.body.classList.contains('mobile-view-active');
+      setIsMobile(isMobileView);
+    };
+    
+    checkMobile();
+    const observer = new MutationObserver(checkMobile);
+    observer.observe(document.body, { attributes: true, attributeFilter: ['class'] });
+    
+    return () => observer.disconnect();
+  }, []);
 
   useEffect(() => {
     let isMounted = true;
@@ -141,74 +151,6 @@ const UserPage: React.FC = () => {
     setStatusMessage('');
   };
 
-  useEffect(() => {
-    const loadCloudinary = () => {
-      if (!window.cloudinary) return;
-
-      widgetRef.current = window.cloudinary.createUploadWidget(
-        {
-          cloudName: import.meta.env.VITE_CLOUDINARY_CLOUD_NAME,
-          uploadPreset: import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET,
-          cropping: true,
-          croppingAspectRatio: 1,
-          showUploadMoreButton: false,
-          multiple: false,
-          sources: ['local', 'url', 'camera'],
-        },
-        (error: any, result: any) => {
-          if (!error && result && result.event === 'success') {
-            const url = result.info.secure_url as string;
-            setFormData((prev) => ({
-              ...prev,
-              avatarUrl: url,
-            }));
-            setStatusMessage('프로필 이미지가 업로드되었습니다. "수정 완료" 버튼을 눌러 저장하세요.');
-            setIsDirty(true);
-          } else if (error) {
-            console.error('프로필 이미지 업로드 실패:', error);
-            setStatusMessage('이미지 업로드에 실패했습니다. 다시 시도해주세요.');
-          }
-        }
-      );
-    };
-
-    if (window.cloudinary) {
-      loadCloudinary();
-    } else {
-      const existingScript = document.querySelector('script[data-cloudinary="true"]');
-      if (!existingScript) {
-        const script = document.createElement('script');
-        script.src = 'https://upload-widget.cloudinary.com/global/all.js';
-        script.async = true;
-        script.dataset.cloudinary = 'true';
-        script.onload = () => loadCloudinary();
-        document.body.appendChild(script);
-      }
-    }
-
-    return () => {
-      if (widgetRef.current) {
-        widgetRef.current.destroy();
-        widgetRef.current = null;
-      }
-    };
-  }, []);
-
-  const handleAvatarClick = () => {
-    if (activeSection !== 'profile') return;
-    if (widgetRef.current) {
-      widgetRef.current.open();
-    }
-  };
-
-  const handleAvatarKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
-    if (activeSection !== 'profile') return;
-    if (event.key === 'Enter' || event.key === ' ') {
-      event.preventDefault();
-      handleAvatarClick();
-    }
-  };
-
   const handleSave = async (event: React.FormEvent) => {
     event.preventDefault();
     if (!authUser) return;
@@ -225,7 +167,6 @@ const UserPage: React.FC = () => {
         address: formData.address || '',
         blog: formData.blog || '',
         instagram: formData.instagram || '',
-        avatarUrl: formData.avatarUrl || '',
       });
 
       if (authUser) {
@@ -371,7 +312,6 @@ const UserPage: React.FC = () => {
     return value.toLocaleDateString('ko-KR');
   };
 
-  const avatarInitial = (formData.nickname || formData.name || profile?.nickname || profile?.name || authUser?.displayName || greetingFallback()).charAt(0).toUpperCase();
   const displayedName = formData.nickname || formData.name || profile?.nickname || profile?.name || authUser?.displayName || greetingFallback();
 
   function greetingFallback() {
@@ -381,7 +321,104 @@ const UserPage: React.FC = () => {
     return '사용자';
   }
 
-  const renderProfileSection = () => (
+  const renderMobileProfileSection = () => (
+    <div className="mobile-user-profile">
+      <div className="mobile-user-info-section">
+        <div className="info-display-item">
+          <span className="info-display-label">이름:</span>
+          <input
+            type="text"
+            className={`info-display-input ${isEditable && isDirty && formData.name !== profile?.name ? 'modified' : ''}`}
+            value={formData.name || '-'}
+            onChange={(e) => handleInputChange('name', e.target.value)}
+            disabled={!isEditable}
+          />
+        </div>
+        <div className="info-display-item">
+          <span className="info-display-label">닉네임:</span>
+          <input
+            type="text"
+            className={`info-display-input ${isEditable && isDirty && formData.nickname !== profile?.nickname ? 'modified' : ''}`}
+            value={formData.nickname || '-'}
+            onChange={(e) => handleInputChange('nickname', e.target.value)}
+            disabled={!isEditable}
+          />
+        </div>
+        <div className="info-display-item">
+          <span className="info-display-label">이메일:</span>
+          <input
+            type="email"
+            className="info-display-input"
+            value={formData.email || '-'}
+            disabled
+          />
+        </div>
+        <div className="info-display-item">
+          <span className="info-display-label">휴대폰:</span>
+          <input
+            type="tel"
+            className={`info-display-input ${isEditable && isDirty && formData.phone !== profile?.phone ? 'modified' : ''}`}
+            value={formData.phone || '-'}
+            onChange={(e) => handleInputChange('phone', e.target.value)}
+            disabled={!isEditable}
+          />
+        </div>
+        <div className="info-display-item">
+          <span className="info-display-label">주소:</span>
+          <input
+            type="text"
+            className={`info-display-input ${isEditable && isDirty && formData.address !== profile?.address ? 'modified' : ''}`}
+            value={formData.address || '-'}
+            onChange={(e) => handleInputChange('address', e.target.value)}
+            disabled={!isEditable}
+          />
+        </div>
+        <div className="info-display-item">
+          <span className="info-display-label">블로그:</span>
+          <input
+            type="url"
+            className={`info-display-input ${isEditable && isDirty && formData.blog !== profile?.blog ? 'modified' : ''}`}
+            value={formData.blog || '-'}
+            onChange={(e) => handleInputChange('blog', e.target.value)}
+            disabled={!isEditable}
+          />
+        </div>
+        <div className="info-display-item">
+          <span className="info-display-label">인스타그램:</span>
+          <input
+            type="text"
+            className={`info-display-input ${isEditable && isDirty && formData.instagram !== profile?.instagram ? 'modified' : ''}`}
+            value={formData.instagram || '-'}
+            onChange={(e) => handleInputChange('instagram', e.target.value)}
+            disabled={!isEditable}
+          />
+        </div>
+      </div>
+      <div className="mobile-user-edit-section">
+        <span
+          className="mobile-edit-toggle-text"
+          onClick={() => setIsEditable(!isEditable)}
+        >
+          {isEditable ? '수정 취소' : '수정'}
+        </span>
+        {isEditable && (
+          <span
+            className={`mobile-save-text ${!isDirty || isSaving ? 'disabled' : ''}`}
+            onClick={async (e) => {
+              if (!isDirty || isSaving) return;
+              e.preventDefault();
+              await handleSave(e as any);
+              setIsEditable(false);
+            }}
+          >
+            {isSaving ? '저장 중...' : '수정 완료'}
+          </span>
+        )}
+      </div>
+    </div>
+  );
+
+  const renderWebProfileSection = () => (
     <form className="user-form" onSubmit={handleSave}>
       <div className="user-form__group">
         <label htmlFor="name">이름</label>
@@ -466,8 +503,76 @@ const UserPage: React.FC = () => {
     </form>
   );
 
-  const renderReviewSection = () => (
-    <div className="user-review-container">
+  const renderProfileSection = () => {
+    return isMobile ? renderMobileProfileSection() : renderWebProfileSection();
+  };
+
+  const renderReviewSection = () => {
+    if (isMobile) {
+      return (
+        <div className="mobile-user-review-container">
+          <div className="mobile-review-stats">
+            <div className="mobile-review-stat-card">
+              <span className="mobile-review-stat-value">{reviewStats.total}</span>
+              <span className="mobile-review-stat-label">총 신청수</span>
+            </div>
+            <div className="mobile-review-stat-card">
+              <span className="mobile-review-stat-value">{reviewStats.waiting}</span>
+              <span className="mobile-review-stat-label">서평대기</span>
+            </div>
+            <div className="mobile-review-stat-card">
+              <span className="mobile-review-stat-value">{reviewStats.shipping}</span>
+              <span className="mobile-review-stat-label">발송중</span>
+            </div>
+            <div className="mobile-review-stat-card">
+              <span className="mobile-review-stat-value">{reviewStats.pending}</span>
+              <span className="mobile-review-stat-label">진행중</span>
+            </div>
+            <div className="mobile-review-stat-card">
+              <span className="mobile-review-stat-value">{reviewStats.completed}</span>
+              <span className="mobile-review-stat-label">완료된 서평</span>
+            </div>
+          </div>
+
+          {reviewLoading ? (
+            <div className="mobile-review-loading">서평 신청 내역을 불러오는 중입니다...</div>
+          ) : reviewApplications.length === 0 ? (
+            <div className="mobile-review-empty">아직 신청된 서평이 없습니다. 원하는 도서를 선택하여 서평을 신청해보세요.</div>
+          ) : (
+            <div className="mobile-review-list">
+              {reviewApplications.map((application) => {
+                return (
+                  <div className="mobile-review-card" key={application.id}>
+                    <div className="mobile-review-card-header">
+                      <h3>{application.bookTitle}</h3>
+                      <p className="mobile-review-card-subtitle">{application.bookAuthor}</p>
+                      <span className={`mobile-review-status-badge status-${application.status}`}>{application.status}</span>
+                    </div>
+                    <div className="mobile-review-card-meta">
+                      <span>신청일: {formatDate(application.requestedAt)}</span>
+                      <span>발송일: {formatDate(application.shippedAt)}</span>
+                      <span>완료일: {formatDate(application.completedAt)}</span>
+                    </div>
+                    {application.status === '서평대기' && (
+                      <button
+                        type="button"
+                        className="mobile-review-write-btn"
+                        onClick={() => handleWriteReview(application)}
+                      >
+                        서평 작성하기
+                      </button>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    return (
+      <div className="user-review-container">
       <div className="user-review-stats">
         <div className="review-stat-card">
           <span className="review-stat-value">{reviewStats.total}</span>
@@ -560,7 +665,8 @@ const UserPage: React.FC = () => {
         </div>
       )}
     </div>
-  );
+    );
+  };
 
   if (loading) {
     return (
@@ -578,7 +684,7 @@ const UserPage: React.FC = () => {
   }
 
   return (
-    <div className="user-page">
+    <div className={`user-page ${isMobile ? 'publishing-website mobile-viewport' : ''}`}>
       <div className="user-dashboard">
         <aside className="user-sidebar">
           <div className="user-sidebar__section">
@@ -599,46 +705,58 @@ const UserPage: React.FC = () => {
         </aside>
 
         <main className="user-main">
-          <div className="user-main-top">
-            <span className="user-main-section-label">{activeSection === 'profile' ? '회원 정보' : '서평 관리'}</span>
-            <Link to="/" className="home-link" aria-label="홈으로 이동">
-              <img src="/home-icon.svg" alt="홈" />
-            </Link>
-          </div>
+          {!isMobile && (
+            <>
+              <div className="user-main-top">
+                <span className="user-main-section-label">{activeSection === 'profile' ? '회원 정보' : '서평 관리'}</span>
+                <Link to="/" className="home-link" aria-label="홈으로 이동">
+                  <img src="/home-icon.svg" alt="홈" />
+                </Link>
+              </div>
 
-          <div className="user-main__header">
-            <div className="avatar-block">
-              <div
-                className={`avatar ${formData.avatarUrl ? 'has-image' : ''}`}
-                style={formData.avatarUrl ? { backgroundImage: `url(${formData.avatarUrl})` } : undefined}
-                onClick={handleAvatarClick}
-                onKeyDown={handleAvatarKeyDown}
-                role="button"
-                tabIndex={0}
-                aria-label="프로필 이미지 변경"
-                aria-disabled={activeSection !== 'profile'}
-              >
-                {!formData.avatarUrl && <span className="avatar__initial">{avatarInitial}</span>}
-                <div className="avatar__plus">
-                  <img src="/plus-icon.svg" alt="아바타 변경" />
+              <div className="user-main__header">
+                <div className="user-main__headline">
+                  <h1>{displayedName} 회원정보</h1>
+                  <span>{profile?.email || authUser?.email || ''}</span>
                 </div>
               </div>
-              <span className={`avatar-caption ${activeSection !== 'profile' ? 'disabled' : ''}`}>
-                {activeSection === 'profile' ? '아바타 변경' : '보기 전용'}
-              </span>
+            </>
+          )}
+          {isMobile && activeSection === 'profile' && (
+            <div className="mobile-user-header-wrapper">
+              <MobileHeader 
+                title={displayedName}
+                backTo="/"
+                titleFontSize={20}
+              />
+              <span className="mobile-header-subtitle">회원정보</span>
             </div>
-
-            <div className="user-main__headline">
-              <h1>{displayedName}님</h1>
-              <span>{profile?.email || authUser.email}</span>
-            </div>
-          </div>
+          )}
 
           {activeSection === 'profile' ? renderProfileSection() : renderReviewSection()}
         </main>
       </div>
+          {isMobile && activeSection === 'reviews' && (
+            <>
+              <div className="mobile-user-header-wrapper">
+                <MobileHeader 
+                  title="서평 관리"
+                  backTo="/"
+                  titleFontSize={16}
+                />
+              </div>
+              <button
+                className="mobile-review-management-btn"
+                onClick={() => setActiveSection('profile')}
+                style={{ background: '#6b7280' }}
+              >
+                <span style={{ fontSize: '12px' }}>회원정보</span>
+              </button>
+            </>
+          )}
     </div>
   );
 };
 
 export default UserPage;
+

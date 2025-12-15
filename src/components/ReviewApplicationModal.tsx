@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react'
 import { User } from 'firebase/auth'
-import { doc, getDoc, addDoc, updateDoc, collection, Timestamp } from 'firebase/firestore'
+import { doc, getDoc, addDoc, updateDoc, collection, Timestamp, query, where, getDocs } from 'firebase/firestore'
 import { db } from '../firebase'
 import './ReviewApplicationModal.css'
+import closeIcon from '../assets/icons/Close.png'
 
 interface Book {
   id?: string;
@@ -10,7 +11,7 @@ interface Book {
   author: string;
   rating: number;
   review: string;
-  createdAt: any;
+  createdAt?: any;
   category?: string;
   genre?: string;
   publisher?: string;
@@ -127,16 +128,54 @@ const ReviewApplicationModal: React.FC<ReviewApplicationModalProps> = ({
     if (!user) return
 
     try {
-      // 사용자의 미완료 서평 수 조회 (실제 구현에서는 Firestore 쿼리 사용)
-      // 임시로 랜덤 값 사용
+      // 사용자의 미완료 서평 수 조회
+      const applicationsRef = collection(db, 'reviewApplications');
+      
+      // 회원ID로 조회
+      const uidQuery = query(applicationsRef, where('회원ID', '==', user.uid));
+      const uidSnapshot = await getDocs(uidQuery);
+      
+      // applicantId로도 조회 (사용자 프로필 ID가 있는 경우)
+      let applicantIdDocs: any[] = [];
+      try {
+        const userDoc = await getDoc(doc(db, 'users', user.uid));
+        if (userDoc.exists() && userDoc.data().id) {
+          const applicantIdQuery = query(applicationsRef, where('applicantId', '==', userDoc.data().id));
+          const applicantIdSnapshot = await getDocs(applicantIdQuery);
+          applicantIdDocs = applicantIdSnapshot.docs;
+        }
+      } catch (err) {
+        // applicantId 조회 실패는 무시
+      }
+      
+      // 모든 신청서 수집 (중복 제거)
+      const allApps = new Map();
+      uidSnapshot.docs.forEach(doc => {
+        allApps.set(doc.id, doc.data());
+      });
+      applicantIdDocs.forEach(doc => {
+        allApps.set(doc.id, doc.data());
+      });
+      
+      // 미완료 서평 수 계산 (서평완료가 아닌 것들)
+      const incompleteCount = Array.from(allApps.values()).filter(
+        (app: any) => app.처리상태 !== '서평완료'
+      ).length;
+      
       setReviewCount({
-        current: Math.floor(Math.random() * 3),
+        current: incompleteCount,
         max: 3
       })
     } catch (error) {
       console.error('서평 수 조회 오류:', error)
+      setReviewCount({
+        current: 0,
+        max: 3
+      })
     }
   }
+
+
 
   const handleInputChange = (field: keyof UserInfo, value: string) => {
     setUserInfo(prev => ({
@@ -145,9 +184,14 @@ const ReviewApplicationModal: React.FC<ReviewApplicationModalProps> = ({
     }))
   }
 
-
   const handleSubmit = async () => {
     if (!user || !book || !isInfoConfirmed) return
+
+    // 미완료 서평이 3개 이상이면 신청 불가
+    if (reviewCount.current >= reviewCount.max) {
+      alert(`최대 ${reviewCount.max}개까지 신청 가능합니다. 현재 미완료 서평이 ${reviewCount.current}개입니다.`)
+      return
+    }
 
     try {
       setSubmitting(true)
@@ -210,8 +254,8 @@ const ReviewApplicationModal: React.FC<ReviewApplicationModalProps> = ({
   return (
     <div className="review-application-overlay" onClick={handleOverlayClick}>
       <div className="review-application-modal">
-        <button className="review-application-close" onClick={onClose}>
-          ×
+        <button className="review-application-close" onClick={onClose} aria-label="닫기">
+          <img src={closeIcon} alt="닫기" style={{ width: '16px', height: '16px' }} />
         </button>
         
         <div className="review-application-content">
@@ -228,52 +272,48 @@ const ReviewApplicationModal: React.FC<ReviewApplicationModalProps> = ({
             </div>
           </div>
 
-          <div className="form-section">
-            <div className="form-group">
-              <label htmlFor="name">이름</label>
+          <div className="info-display-section">
+            <div className="info-display-item">
+              <span className="info-display-label">이름:</span>
               <input
                 type="text"
-                id="name"
-                value={userInfo.name}
+                className="info-display-input"
+                value={userInfo.name || ''}
                 onChange={(e) => handleInputChange('name', e.target.value)}
-                className="form-input"
                 disabled={loading}
               />
             </div>
 
-            <div className="form-group">
-              <label htmlFor="phone">연락처</label>
+            <div className="info-display-item">
+              <span className="info-display-label">연락처:</span>
               <input
                 type="tel"
-                id="phone"
-                value={userInfo.phone}
+                className="info-display-input"
+                value={userInfo.phone || ''}
                 onChange={(e) => handleInputChange('phone', e.target.value)}
-                className="form-input"
                 placeholder="010-1234-5678"
                 disabled={loading}
               />
             </div>
 
-            <div className="form-group">
-              <label htmlFor="email">email</label>
+            <div className="info-display-item">
+              <span className="info-display-label">email:</span>
               <input
                 type="email"
-                id="email"
-                value={userInfo.email}
+                className="info-display-input"
+                value={userInfo.email || ''}
                 onChange={(e) => handleInputChange('email', e.target.value)}
-                className="form-input"
                 disabled={loading}
               />
             </div>
 
-            <div className="form-group">
-              <label htmlFor="address">주소</label>
+            <div className="info-display-item">
+              <span className="info-display-label">주소:</span>
               <input
                 type="text"
-                id="address"
-                value={userInfo.address}
+                className="info-display-input"
+                value={userInfo.address || ''}
                 onChange={(e) => handleInputChange('address', e.target.value)}
-                className="form-input"
                 placeholder="서울시 강남구 테헤란로 123"
                 disabled={loading}
               />

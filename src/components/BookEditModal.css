@@ -37,7 +37,7 @@
   border-radius: 8px;
   font-size: 0.9rem;
   transition: border-color 0.2s ease;
-  font-family: inherit;
+  font-family: 'Suite', sans-serif;
 }
 
 .form-group input:focus,

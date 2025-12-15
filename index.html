@@ -24,22 +24,65 @@
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
     <script>
-      // WebSocket 오류 무시
+      // WebSocket 오류 무시 (Vite HMR 관련)
       window.addEventListener('error', function(e) {
-        if (e.message && e.message.includes('WebSocket')) {
+        const errorMessage = e.message?.toString() || '';
+        if (
+          errorMessage.includes('WebSocket') ||
+          errorMessage.includes('ws://localhost') ||
+          (e.target && e.target.tagName === 'SCRIPT' && errorMessage.includes('Failed to load'))
+        ) {
           e.preventDefault();
+          e.stopPropagation();
           return false;
         }
-      });
+      }, true);
       
-      // WebSocket 연결 실패 시 무시
+      // WebSocket 및 확장 프로그램 관련 오류 무시
       const originalConsoleError = console.error;
       console.error = function(...args) {
-        if (args[0] && typeof args[0] === 'string' && args[0].includes('WebSocket')) {
-          return; // WebSocket 오류는 무시
+        const errorMessage = args[0]?.toString() || '';
+        const fullMessage = args.map(arg => String(arg)).join(' ');
+        if (
+          errorMessage.includes('WebSocket') ||
+          errorMessage.includes('ws://localhost') ||
+          errorMessage.includes('Failed to load resource') ||
+          errorMessage.includes('message port closed') ||
+          errorMessage.includes('content.js') ||
+          errorMessage.includes('Extension context invalidated') ||
+          errorMessage.includes('message channel closed') ||
+          errorMessage.includes('asynchronous response') ||
+          errorMessage.includes('A listener indicated an asynchronous response') ||
+          errorMessage.includes('message channel closed before a response') ||
+          fullMessage.includes('message channel closed before a response') ||
+          fullMessage.includes('asynchronous response by returning true')
+        ) {
+          return; // 관련 오류는 무시
         }
         originalConsoleError.apply(console, args);
       };
+      
+      // Promise rejection 에러도 필터링
+      window.addEventListener('unhandledrejection', function(event) {
+        const errorMessage = event.reason?.toString() || '';
+        const errorStack = event.reason?.stack?.toString() || '';
+        const fullError = errorMessage + ' ' + errorStack;
+        if (
+          errorMessage.includes('WebSocket') ||
+          errorMessage.includes('ws://localhost') ||
+          errorMessage.includes('message port closed') ||
+          errorMessage.includes('content.js') ||
+          errorMessage.includes('Extension context invalidated') ||
+          errorMessage.includes('message channel closed') ||
+          errorMessage.includes('asynchronous response') ||
+          errorMessage.includes('A listener indicated an asynchronous response') ||
+          errorMessage.includes('message channel closed before a response') ||
+          fullError.includes('message channel closed before a response') ||
+          fullError.includes('asynchronous response by returning true')
+        ) {
+          event.preventDefault();
+        }
+      });
     </script>
   </body>
 </html>

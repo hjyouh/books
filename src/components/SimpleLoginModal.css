@@ -27,6 +27,7 @@
   padding: 0;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
   position: relative;
+  font-family: 'Suite', sans-serif;
 }
 
 @media (max-width: 768px) {
@@ -47,23 +48,28 @@ body.mobile-view-active .simple-login-modal,
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 20px 24px;
+  padding: 8px 12px;
   border-bottom: 1px solid rgba(209, 213, 219, 0.3);
+  height: 40px;
+  box-sizing: border-box;
 }
 
 @media (max-width: 768px) {
   .simple-login-header {
-    padding: 16px 20px;
+    padding: 8px 12px;
+    height: 40px;
+    box-sizing: border-box;
   }
 }
 
 .simple-login-title {
   margin: 0;
-  font-size: 18px;
+  font-size: 15px;
   font-weight: 600;
   color: #d1d5db;
   text-align: center;
   flex: 1;
+  font-family: 'Suite', sans-serif;
 }
 
 .simple-login-close {
@@ -80,18 +86,19 @@ body.mobile-view-active .simple-login-modal,
   align-items: center;
   justify-content: center;
   line-height: 1;
+  font-family: 'Suite', sans-serif;
 }
 
 .simple-login-form {
   display: flex;
   flex-direction: column;
   gap: 20px;
-  padding: 24px;
+  padding: 12px;
 }
 
 @media (max-width: 768px) {
   .simple-login-form {
-    padding: 20px;
+    padding: 12px;
     gap: 16px;
   }
 }
@@ -104,11 +111,12 @@ body.mobile-view-active .simple-login-modal,
 }
 
 .simple-login-input-group label {
-  font-size: 14px;
+  font-size: 12px;
   font-weight: 400;
   color: #d1d5db;
   min-width: 60px;
   flex-shrink: 0;
+  font-family: 'Suite', sans-serif;
 }
 
 .simple-login-input-group input {
@@ -116,11 +124,13 @@ body.mobile-view-active .simple-login-modal,
   padding: 12px 16px;
   border: 1px solid rgba(209, 213, 219, 0.3);
   border-radius: 8px;
-  font-size: 14px;
+  font-size: 12px;
   background: rgba(255, 255, 255, 0.1);
   color: #d1d5db;
   box-sizing: border-box;
   transition: border-color 0.2s, background-color 0.2s;
+  font-family: 'Suite', sans-serif;
+  height: 30px;
 }
 
 .simple-login-input-group input::placeholder {
@@ -135,11 +145,12 @@ body.mobile-view-active .simple-login-modal,
 
 .simple-login-error {
   color: #ef4444;
-  font-size: 13px;
+  font-size: 12px;
   padding: 8px 12px;
   background: #fef2f2;
   border-radius: 6px;
   border: 1px solid #fecaca;
+  font-family: 'Suite', sans-serif;
 }
 
 .simple-login-button {
@@ -149,10 +160,11 @@ body.mobile-view-active .simple-login-modal,
   color: #ffffff;
   border: none;
   border-radius: 8px;
-  font-size: 15px;
+  font-size: 12px;
   font-weight: 600;
   cursor: pointer;
   transition: background-color 0.2s;
+  font-family: 'Suite', sans-serif;
 }
 
 .simple-login-button:hover:not(:disabled) {
@@ -169,8 +181,9 @@ body.mobile-view-active .simple-login-modal,
   justify-content: center;
   align-items: center;
   gap: 8px;
-  font-size: 14px;
+  font-size: 12px;
   margin-top: 8px;
+  font-family: 'Suite', sans-serif;
 }
 
 .simple-login-link {
@@ -180,7 +193,8 @@ body.mobile-view-active .simple-login-modal,
   font-weight: 400;
   cursor: pointer;
   padding: 0;
-  font-size: 14px;
+  font-size: 12px;
+  font-family: 'Suite', sans-serif;
 }
 
 .simple-login-link:hover {
@@ -273,17 +287,18 @@ body.mobile-view-active .simple-login-modal,
 
   .simple-login-input-group label {
     min-width: 50px;
-    font-size: 13px;
+    font-size: 12px;
   }
 
   .simple-login-input-group input {
     padding: 10px 12px;
-    font-size: 13px;
+    font-size: 12px;
+    height: 30px;
   }
 
   .simple-login-button {
     padding: 12px;
-    font-size: 14px;
+    font-size: 12px;
   }
 
   .simple-login-footer {

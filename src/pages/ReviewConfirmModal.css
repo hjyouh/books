@@ -1,0 +1,147 @@
+/* 서평 작성 확인 모달 */
+.mobile-review-confirm-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 2000;
+  padding: 20px;
+}
+
+.mobile-review-confirm-modal {
+  position: relative;
+  width: 100%;
+  max-width: 375px;
+  max-height: 90vh;
+  background: #2a2a2a;
+  border-radius: 16px;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  overflow-y: auto;
+  font-family: 'Suite', sans-serif;
+}
+
+.mobile-review-confirm-close {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  background: none;
+  border: none;
+  padding: 4px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+}
+
+.mobile-review-confirm-close img {
+  width: 16px;
+  height: 16px;
+}
+
+.mobile-review-confirm-loading {
+  text-align: center;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 14px;
+  padding: 40px 0;
+}
+
+.mobile-review-confirm-book-info {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.mobile-review-confirm-book-cover {
+  width: 100%;
+  max-width: 200px;
+  margin: 0 auto;
+  aspect-ratio: 2/3;
+  border-radius: 8px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.mobile-review-confirm-book-cover img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.mobile-review-confirm-book-details {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.mobile-review-confirm-book-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: #ffffff;
+  margin: 0;
+  line-height: 1.4;
+}
+
+.mobile-review-confirm-book-author {
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.7);
+  margin: 0;
+}
+
+.mobile-review-confirm-book-meta {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.5);
+  margin: 0;
+}
+
+.mobile-review-confirm-message {
+  text-align: center;
+  padding: 20px 0;
+}
+
+.mobile-review-confirm-message p {
+  font-size: 16px;
+  font-weight: 600;
+  color: #ffffff;
+  margin: 0;
+}
+
+.mobile-review-confirm-actions {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 24px;
+  padding-top: 20px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.mobile-review-confirm-yes,
+.mobile-review-confirm-no {
+  font-size: 16px;
+  font-weight: 600;
+  color: #96AEFC;
+  cursor: pointer;
+  transition: color 0.2s;
+  user-select: none;
+}
+
+.mobile-review-confirm-yes:hover,
+.mobile-review-confirm-no:hover {
+  color: #7d9efc;
+}
+
+.mobile-review-confirm-no {
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.mobile-review-confirm-no:hover {
+  color: rgba(255, 255, 255, 0.7);
+}
+

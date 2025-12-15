@@ -1,6 +1,7 @@
-import React, { useState } from 'react'
+import React, { useState, useRef, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { User } from 'firebase/auth'
+import { db } from '../firebase'
 import ReviewApplicationModal from './ReviewApplicationModal'
 import './BookDetailModal.css'
 
@@ -10,7 +11,7 @@ interface Book {
   author: string;
   rating: number;
   review: string;
-  createdAt: any;
+  createdAt?: any;
   category?: string;
   genre?: string;
   publisher?: string;
@@ -19,6 +20,10 @@ interface Book {
   imageUrl?: string;
   status?: string;
   reviewCount?: number;
+  purchaseUrl?: string;
+  likes?: number;
+  likedUsers?: string[];
+  comments?: Array<{ userId: string; userNickname?: string; userDisplayId?: string; text: string; createdAt?: any; id?: string }>;
 }
 
 interface BookDetailModalProps {
@@ -26,24 +31,77 @@ interface BookDetailModalProps {
   onClose: () => void
   book: Book | null
   user: User | null
+  preventCloseRef?: React.MutableRefObject<boolean> // 외부에서 모달 닫기 방지 플래그 전달
 }
 
-const BookDetailModal: React.FC<BookDetailModalProps> = ({ isOpen, onClose, book, user }) => {
+const BookDetailModal: React.FC<BookDetailModalProps> = ({ isOpen, onClose, book, user, preventCloseRef: externalPreventCloseRef }) => {
   const [showLoginPrompt, setShowLoginPrompt] = useState(false)
   const [showReviewApplication, setShowReviewApplication] = useState(false)
   const navigate = useNavigate()
+  const internalPreventCloseRef = useRef(false)
+  const preventCloseRef = externalPreventCloseRef || internalPreventCloseRef // 외부 ref가 있으면 사용, 없으면 내부 ref 사용
+  const onCloseRef = useRef(onClose) // onClose를 ref로 저장하여 항상 최신 값 유지
+  
+  // onClose가 변경될 때마다 ref 업데이트
+  useEffect(() => {
+    onCloseRef.current = onClose
+  }, [onClose])
+  
+  // onClose를 래핑
+  const safeOnClose = () => {
+    if (preventCloseRef.current) {
+      return
+    }
+    onCloseRef.current()
+  }
 
-  if (!isOpen || !book) return null
-
+  // 모달 닫기 처리
   const handleOverlayClick = (e: React.MouseEvent) => {
+    if (preventCloseRef.current) {
+      e.preventDefault()
+      e.stopPropagation()
+      return
+    }
+    
+    const target = e.target as HTMLElement
+    
+    // 모달 내부 요소 클릭 시 모달이 닫히지 않도록
+    if (target.closest('.book-detail-modal') || 
+        target.closest('.review-apply-btn') ||
+        target.closest('.book-detail-content')) {
+      return
+    }
+    
+    // 오버레이 자체를 클릭한 경우에만 모달 닫기
     if (e.target === e.currentTarget) {
-      onClose()
+      safeOnClose()
       setShowLoginPrompt(false)
       setShowReviewApplication(false)
     }
   }
+  
+  const handleOverlayMouseDown = (e: React.MouseEvent) => {
+    if (preventCloseRef.current) {
+      e.preventDefault()
+      e.stopPropagation()
+    }
+  }
+  
+  const handleOverlayMouseUp = (e: React.MouseEvent) => {
+    if (preventCloseRef.current) {
+      e.preventDefault()
+      e.stopPropagation()
+    }
+  }
 
-  const handleReviewApplyClick = () => {
+  const shouldShowModal = isOpen || preventCloseRef.current
+  
+  if (!shouldShowModal || !book) return null
+
+  const handleReviewApplyClick = (e: React.MouseEvent<HTMLButtonElement>) => {
+    e.preventDefault()
+    e.stopPropagation()
+    
     if (!user) {
       setShowLoginPrompt(true)
     } else {
@@ -54,7 +112,7 @@ const BookDetailModal: React.FC<BookDetailModalProps> = ({ isOpen, onClose, book
 
   const handleLoginButtonClick = () => {
     navigate('/login')
-    onClose()
+    safeOnClose()
     setShowLoginPrompt(false)
   }
 
@@ -63,9 +121,9 @@ const BookDetailModal: React.FC<BookDetailModalProps> = ({ isOpen, onClose, book
   }
 
   return (
-    <div className="book-detail-overlay" onClick={handleOverlayClick}>
-      <div className="book-detail-modal">
-        <button className="book-detail-close" onClick={() => { onClose(); setShowLoginPrompt(false); setShowReviewApplication(false); }}>
+    <div className="book-detail-overlay" onClick={handleOverlayClick} onMouseDown={handleOverlayMouseDown} onMouseUp={handleOverlayMouseUp}>
+      <div className="book-detail-modal" onClick={(e) => e.stopPropagation()} onMouseDown={(e) => e.stopPropagation()} onMouseUp={(e) => e.stopPropagation()}>
+        <button className="book-detail-close" onClick={() => { safeOnClose(); setShowLoginPrompt(false); setShowReviewApplication(false); }}>
           ×
         </button>
         
@@ -88,46 +146,80 @@ const BookDetailModal: React.FC<BookDetailModalProps> = ({ isOpen, onClose, book
 
           {/* 오른쪽: 도서 상세 정보 */}
           <div className="book-details-section">
-
-            <div className="detail-item">
-              <h4>장르</h4>
-              <p>{book.genre || '문학'}</p>
-            </div>
-
-            <div className="detail-item">
-              <h4>도서 내용/설명</h4>
-              <p>{book.description || '현대문학의 흐름과 특징을 체계적으로 분석한 전문서'}</p>
-            </div>
-
-            <div className="detail-item">
-              <h4>저자 소개</h4>
-              <p>{book.author}는 현대문학 연구의 권위자로, 서울대 문학과 교수로 재직 중입니다.</p>
-            </div>
-
-            <div className="detail-item">
-              <h4>출판사</h4>
-              <p>{book.publisher || '문학사'}</p>
-            </div>
-
-            <div className="detail-item">
-              <h4>해시태그</h4>
-              <div className="hashtags">
-                <span className="hashtag">#{book.genre || '현대문학'}</span>
-                <span className="hashtag">#문학이론</span>
-                <span className="hashtag">#비평</span>
-                <span className="hashtag">#분석</span>
+            {/* 도서 구분 - 우측 정렬 */}
+            {book.category && (
+              <div className="detail-item category-item">
+                <span className="category-label">{book.category}</span>
               </div>
+            )}
+
+            {/* 책 제목 */}
+            <div className="detail-item detail-item-inline book-title-item">
+              <span className="detail-label">책 제목</span>
+              <span className="detail-value">: {book.title}</span>
             </div>
 
-            <div className="modal-actions">
+            {/* 저자명 */}
+            <div className="detail-item detail-item-inline">
+              <span className="detail-label">저자명</span>
+              <span className="detail-value">: {book.author}</span>
+            </div>
+
+            {/* 장르 */}
+            <div className="detail-item detail-item-inline">
+              <span className="detail-label">장르</span>
+              <span className="detail-value">: {book.genre || '문학'}</span>
+            </div>
+
+            {/* 출판사 */}
+            <div className="detail-item detail-item-inline">
+              <span className="detail-label">출판사</span>
+              <span className="detail-value">: {book.publisher || '문학사'}</span>
+            </div>
+
+            {/* 출간일 */}
+            {book.publishedDate && (
+              <div className="detail-item detail-item-inline">
+                <span className="detail-label">출간일</span>
+                <span className="detail-value">: {book.publishedDate}</span>
+              </div>
+            )}
+
+            {/* 구매 링크 */}
+            {book.purchaseUrl && (
+              <div className="detail-item detail-item-inline detail-item-link">
+                <span className="detail-label">구매 링크</span>
+                <span className="detail-value">: {book.purchaseUrl}</span>
+                <a 
+                  href={book.purchaseUrl} 
+                  target="_blank" 
+                  rel="noopener noreferrer" 
+                  className="purchase-link-button"
+                >
+                  구매 링크
+                </a>
+              </div>
+            )}
+
+            {/* 도서 설명 - 스크롤 가능 영역 */}
+            <div className="detail-item description-item">
+              <h4>도서 설명</h4>
+              <div className="description-content">
+                <div 
+                  className="description-text" 
+                  dangerouslySetInnerHTML={{ __html: book.description || '현대문학의 흐름과 특징을 체계적으로 분석한 전문서' }}
+                />
+              </div>
+              {/* 서평 신청 버튼 - 도서 설명 영역 안에 배치 */}
               {book.category === '서평도서' && (
-                <button className="review-apply-btn" onClick={handleReviewApplyClick}>
+                <button 
+                  type="button" 
+                  className="review-apply-btn" 
+                  onClick={handleReviewApplyClick}
+                >
                   서평 신청
                 </button>
               )}
-              <button className="add-to-favorites-btn">
-                +
-              </button>
             </div>
           </div>
         </div>

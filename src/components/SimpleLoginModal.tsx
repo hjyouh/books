@@ -1,6 +1,7 @@
 import { useState, useEffect, FormEvent } from 'react';
-import { signInWithEmailAndPassword } from 'firebase/auth';
-import { auth, firebaseConfig } from '../firebase';
+import { signInWithEmailAndPassword, sendPasswordResetEmail } from 'firebase/auth';
+import { collection, query, where, getDocs } from 'firebase/firestore';
+import { auth, firebaseConfig, db } from '../firebase';
 import './SimpleLoginModal.css';
 
 interface SimpleLoginModalProps {
@@ -39,6 +40,12 @@ const SimpleLoginModal: React.FC<SimpleLoginModalProps> = ({ isOpen, onClose, on
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showSaveModal, setShowSaveModal] = useState(false);
+  const [mode, setMode] = useState<'login' | 'findId' | 'findPwd'>('login');
+  const [findIdEmail, setFindIdEmail] = useState('');
+  const [findIdPhone, setFindIdPhone] = useState('');
+  const [findPwdId, setFindPwdId] = useState('');
+  const [findPwdEmail, setFindPwdEmail] = useState('');
+  const [findResult, setFindResult] = useState<string>('');
 
   useEffect(() => {
     if (isOpen) {
@@ -47,6 +54,12 @@ const SimpleLoginModal: React.FC<SimpleLoginModalProps> = ({ isOpen, onClose, on
       setError('');
       setIsSubmitting(false);
       setShowSaveModal(false);
+      setMode('login');
+      setFindIdEmail('');
+      setFindIdPhone('');
+      setFindPwdId('');
+      setFindPwdEmail('');
+      setFindResult('');
     }
   }, [isOpen]);
 
@@ -179,12 +192,99 @@ const SimpleLoginModal: React.FC<SimpleLoginModalProps> = ({ isOpen, onClose, on
     onClose();
   };
 
+  const handleFindId = async (e: FormEvent) => {
+    e.preventDefault();
+    setError('');
+    setFindResult('');
+
+    if (!findIdEmail.trim() && !findIdPhone.trim()) {
+      setError('이메일 또는 휴대폰 번호를 입력해주세요.');
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    try {
+      const usersRef = collection(db, 'users');
+      let q;
+      
+      if (findIdEmail.trim()) {
+        q = query(usersRef, where('email', '==', findIdEmail.trim()));
+      } else {
+        q = query(usersRef, where('phone', '==', findIdPhone.trim()));
+      }
+
+      const querySnapshot = await getDocs(q);
+      
+      if (querySnapshot.empty) {
+        setError('등록된 정보가 없습니다.');
+        return;
+      }
+
+      const userData = querySnapshot.docs[0].data();
+      setFindResult(`회원님의 ID는 "${userData.id}" 입니다.`);
+    } catch (error: any) {
+      console.error('ID 찾기 실패:', error);
+      setError('ID 찾기에 실패했습니다. 다시 시도해주세요.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleFindPwd = async (e: FormEvent) => {
+    e.preventDefault();
+    setError('');
+    setFindResult('');
+
+    if (!findPwdId.trim() || !findPwdEmail.trim()) {
+      setError('ID와 이메일을 모두 입력해주세요.');
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    try {
+      // ID로 사용자 찾기
+      const usersRef = collection(db, 'users');
+      const idQuery = query(usersRef, where('id', '==', findPwdId.trim()));
+      const idSnapshot = await getDocs(idQuery);
+
+      if (idSnapshot.empty) {
+        setError('등록된 ID가 없습니다.');
+        return;
+      }
+
+      const userData = idSnapshot.docs[0].data();
+      
+      // 이메일 확인
+      if (userData.email !== findPwdEmail.trim()) {
+        setError('ID와 이메일이 일치하지 않습니다.');
+        return;
+      }
+
+      // 비밀번호 재설정 이메일 전송
+      await sendPasswordResetEmail(auth, userData.email);
+      setFindResult('비밀번호 재설정 링크를 이메일로 전송했습니다. 이메일을 확인해주세요.');
+    } catch (error: any) {
+      console.error('비밀번호 찾기 실패:', error);
+      if (error?.code === 'auth/user-not-found') {
+        setError('등록된 계정이 없습니다.');
+      } else {
+        setError('비밀번호 찾기에 실패했습니다. 다시 시도해주세요.');
+      }
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   return (
     <>
       <div className="simple-login-overlay" onClick={onClose}>
         <div className="simple-login-modal" onClick={(e) => e.stopPropagation()}>
           <div className="simple-login-header">
-            <h2 className="simple-login-title">로그인</h2>
+            <h2 className="simple-login-title">
+              {mode === 'login' ? '로그인' : mode === 'findId' ? '아이디 찾기' : '비밀번호 찾기'}
+            </h2>
             <button 
               className="simple-login-close"
               onClick={onClose}
@@ -193,51 +293,150 @@ const SimpleLoginModal: React.FC<SimpleLoginModalProps> = ({ isOpen, onClose, on
               ✕
             </button>
           </div>
-          <form onSubmit={handleSubmit} className="simple-login-form">
-            <div className="simple-login-input-group">
-              <label htmlFor="simple-login-id">아이디</label>
-              <input
-                id="simple-login-id"
-                type="text"
-                value={id}
-                onChange={(e) => setId(e.target.value)}
-                placeholder=""
-                autoComplete="username"
-              />
-            </div>
 
-            <div className="simple-login-input-group">
-              <label htmlFor="simple-login-password">비밀번호</label>
-              <input
-                id="simple-login-password"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder=""
-                autoComplete="current-password"
-              />
-            </div>
+          {mode === 'login' && (
+            <form onSubmit={handleSubmit} className="simple-login-form">
+              <div className="simple-login-input-group">
+                <label htmlFor="simple-login-id">아이디</label>
+                <input
+                  id="simple-login-id"
+                  type="text"
+                  value={id}
+                  onChange={(e) => setId(e.target.value)}
+                  placeholder=""
+                  autoComplete="username"
+                />
+              </div>
 
-            {error && <div className="simple-login-error">{error}</div>}
+              <div className="simple-login-input-group">
+                <label htmlFor="simple-login-password">비밀번호</label>
+                <input
+                  id="simple-login-password"
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder=""
+                  autoComplete="current-password"
+                />
+              </div>
 
-            <button type="submit" className="simple-login-button" disabled={isSubmitting}>
-              {isSubmitting ? '로그인 중...' : '로그인'}
-            </button>
+              {error && <div className="simple-login-error">{error}</div>}
 
-            <div className="simple-login-footer">
-              <button type="button" className="simple-login-link" onClick={() => {}}>
-                아이디 찾기
+              <button type="submit" className="simple-login-button" disabled={isSubmitting}>
+                {isSubmitting ? '로그인 중...' : '로그인'}
               </button>
-              <span className="simple-login-separator">|</span>
-              <button type="button" className="simple-login-link" onClick={() => {}}>
-                비밀번호 찾기
+
+              <div className="simple-login-footer">
+                <button type="button" className="simple-login-link" onClick={() => setMode('findId')}>
+                  아이디 찾기
+                </button>
+                <span className="simple-login-separator">|</span>
+                <button type="button" className="simple-login-link" onClick={() => setMode('findPwd')}>
+                  비밀번호 찾기
+                </button>
+                <span className="simple-login-separator">|</span>
+                <button type="button" className="simple-login-link" onClick={onSignupClick}>
+                  회원가입
+                </button>
+              </div>
+            </form>
+          )}
+
+          {mode === 'findId' && (
+            <form onSubmit={handleFindId} className="simple-login-form">
+              <div className="simple-login-input-group">
+                <label htmlFor="find-id-email">이메일</label>
+                <input
+                  id="find-id-email"
+                  type="email"
+                  value={findIdEmail}
+                  onChange={(e) => setFindIdEmail(e.target.value)}
+                  placeholder="이메일을 입력하세요"
+                />
+              </div>
+
+              <div style={{ textAlign: 'center', margin: '10px 0', color: '#666', fontSize: '12px', fontFamily: "'Suite', sans-serif" }}>또는</div>
+
+              <div className="simple-login-input-group">
+                <label htmlFor="find-id-phone">휴대폰 번호</label>
+                <input
+                  id="find-id-phone"
+                  type="text"
+                  value={findIdPhone}
+                  onChange={(e) => setFindIdPhone(e.target.value)}
+                  placeholder="010-0000-0000 형식으로 입력"
+                />
+              </div>
+
+              {error && <div className="simple-login-error">{error}</div>}
+              {findResult && <div style={{ color: '#3b82f6', marginBottom: '10px', textAlign: 'center', fontSize: '12px', fontFamily: "'Suite', sans-serif" }}>{findResult}</div>}
+
+              <button type="submit" className="simple-login-button" disabled={isSubmitting}>
+                {isSubmitting ? '찾는 중...' : '아이디 찾기'}
               </button>
-              <span className="simple-login-separator">|</span>
-              <button type="button" className="simple-login-link" onClick={onSignupClick}>
-                회원가입
+
+              <div className="simple-login-footer">
+                <button type="button" className="simple-login-link" onClick={() => setMode('login')}>
+                  로그인
+                </button>
+                <span className="simple-login-separator">|</span>
+                <button type="button" className="simple-login-link" onClick={() => setMode('findPwd')}>
+                  비밀번호 찾기
+                </button>
+                <span className="simple-login-separator">|</span>
+                <button type="button" className="simple-login-link" onClick={onSignupClick}>
+                  회원가입
+                </button>
+              </div>
+            </form>
+          )}
+
+          {mode === 'findPwd' && (
+            <form onSubmit={handleFindPwd} className="simple-login-form">
+              <div className="simple-login-input-group">
+                <label htmlFor="find-pwd-id">아이디</label>
+                <input
+                  id="find-pwd-id"
+                  type="text"
+                  value={findPwdId}
+                  onChange={(e) => setFindPwdId(e.target.value)}
+                  placeholder="아이디를 입력하세요"
+                />
+              </div>
+
+              <div className="simple-login-input-group">
+                <label htmlFor="find-pwd-email">이메일</label>
+                <input
+                  id="find-pwd-email"
+                  type="email"
+                  value={findPwdEmail}
+                  onChange={(e) => setFindPwdEmail(e.target.value)}
+                  placeholder="이메일을 입력하세요"
+                />
+              </div>
+
+              {error && <div className="simple-login-error">{error}</div>}
+              {findResult && <div style={{ color: '#3b82f6', marginBottom: '10px', textAlign: 'center', fontSize: '12px', fontFamily: "'Suite', sans-serif" }}>{findResult}</div>}
+
+              <button type="submit" className="simple-login-button" disabled={isSubmitting}>
+                {isSubmitting ? '전송 중...' : '비밀번호 재설정 이메일 전송'}
               </button>
-            </div>
-          </form>
+
+              <div className="simple-login-footer">
+                <button type="button" className="simple-login-link" onClick={() => setMode('login')}>
+                  로그인
+                </button>
+                <span className="simple-login-separator">|</span>
+                <button type="button" className="simple-login-link" onClick={() => setMode('findId')}>
+                  아이디 찾기
+                </button>
+                <span className="simple-login-separator">|</span>
+                <button type="button" className="simple-login-link" onClick={onSignupClick}>
+                  회원가입
+                </button>
+              </div>
+            </form>
+          )}
         </div>
       </div>
 

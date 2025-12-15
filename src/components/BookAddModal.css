@@ -67,6 +67,7 @@
   overflow: hidden;
   flex-direction: row;
   gap: 0;
+  min-height: 0;
 }
 
 /* 좌측: 책 표지 영역 */
@@ -193,10 +194,12 @@
 .book-form-section {
   flex: 1;
   overflow-y: auto;
+  overflow-x: hidden;
   padding: 16px 18px 18px 20px;
   display: flex;
   flex-direction: column;
   min-width: 0;
+  min-height: 0;
 }
 
 .book-modal-form-new {
@@ -205,6 +208,8 @@
   gap: 10px;
   flex: 1;
   max-width: 100%;
+  min-height: 0;
+  overflow: visible;
 }
 
 .form-row {
@@ -220,9 +225,26 @@
   flex: 1 1 auto; /* 가능한 한 길게 확장 */
 }
 
+/* 포스팅 기간 행은 일반 행과 동일하게 처리 */
+.form-row.posting-row {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.form-row.posting-row .posting-period-fields {
+  flex: 1 1 auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+}
+
 .form-row label {
-  min-width: auto;
-  width: auto;
+  min-width: 80px;
+  width: 80px;
   font-size: 0.9rem;
   font-weight: 500;
   color: #333;
@@ -231,6 +253,7 @@
   margin-right: 0;
   padding-right: 0;
   padding-left: 10px;
+  flex-shrink: 0;
 }
 
 .form-input-inline,
@@ -246,6 +269,8 @@
   box-sizing: border-box;
   text-align: left; /* 입력 내용 좌측 정렬 */
 }
+
+/* 포스팅 기간 내부의 입력 필드는 min-width 제한 없음 - 이미 위에서 정의됨 */
 
 .form-input-inline:focus,
 .form-select-inline:focus,
@@ -297,7 +322,7 @@
   border-radius: 8px;
   font-size: 0.9rem;
   background-color: #f8f9fa;
-  font-family: inherit;
+  font-family: 'Suite', sans-serif;
   min-height: 240px;
   transition: border-color 0.2s ease, background-color 0.2s ease;
   box-sizing: border-box;
@@ -361,12 +386,34 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  width: 100%;
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+}
+
+.posting-period-fields input.form-input-inline.form-date-input {
+  flex: 1 1 0;
+  min-width: 0 !important;
+  width: auto;
+  max-width: none;
+  margin: 0;
+  padding: 9px 12px;
+  box-sizing: border-box;
+}
+
+.posting-period-fields input.form-input-inline.form-date-input:first-child {
+  margin-left: 0;
+  padding-left: 12px;
+  padding-right: 12px;
 }
 
 .posting-separator {
   color: #666;
   font-weight: 600;
+  flex-shrink: 0;
+  padding: 0 4px;
+  white-space: nowrap;
 }
 
 .posting-error {
@@ -376,9 +423,7 @@
 }
 
 .form-date-input {
-  font-family: 'SUIT', 'SUITE', sans-serif;
-  min-width: 320px;
-  flex: 1;
+  font-family: 'Suite', sans-serif;
 }
 
 .editor-container {
@@ -387,6 +432,11 @@
   display: flex;
   flex-direction: column;
   gap: 6px;
+}
+
+.editor-container .editor-toolbar.floating {
+  top: -50px;
+  left: 0;
 }
 
 .editor-backdrop {
@@ -484,6 +534,20 @@
   flex-wrap: wrap;
 }
 
+.editor-toolbar.floating {
+  position: absolute;
+  background: white;
+  border: 1px solid #d0d0d0;
+  border-radius: 8px;
+  padding: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  z-index: 100;
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
 .editor-toolbar button,
 .editor-toolbar label,
 .editor-toolbar select {
@@ -497,7 +561,7 @@
   align-items: center;
   justify-content: center;
   transition: all 0.2s ease;
-  font-family: inherit;
+  font-family: 'Suite', sans-serif;
 }
 
 .editor-toolbar select {
@@ -562,29 +626,15 @@
   position: absolute;
   right: 2px;
   bottom: 2px;
-  width: 20px;
-  height: 20px;
+  width: 12px;
+  height: 12px;
   background-image: 
-    repeating-linear-gradient(
-      0deg,
-      transparent,
-      transparent 2px,
-      #999 2px,
-      #999 4px
-    ),
-    repeating-linear-gradient(
-      90deg,
-      transparent,
-      transparent 2px,
-      #999 2px,
-      #999 4px
-    );
-  background-position: 
-    bottom right,
-    bottom right;
-  background-size: 10px 10px, 10px 10px;
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cline x1='8' y1='10' x2='10' y2='8' stroke='%23999' stroke-width='1.2' stroke-linecap='round'/%3E%3Cline x1='9' y1='10' x2='10' y2='9' stroke='%23999' stroke-width='1.2' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-position: bottom right;
+  background-repeat: no-repeat;
   pointer-events: none;
   z-index: 1;
+  opacity: 0.6;
 }
 
 .editor-surface.fullscreen {
