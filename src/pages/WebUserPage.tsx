@@ -285,8 +285,7 @@ const WebUserPage: React.FC = () => {
   };
 
   const handleWriteReview = (application: UserReviewApplication) => {
-    const message = `"${application.bookTitle}" 서평 작성이 필요합니다. 준비 중인 서평 작성 페이지로 이동해주세요.`;
-    alert(message);
+    navigate(`/review/write/${application.id}`);
   };
 
   const formatDate = (value: Date | null) => {

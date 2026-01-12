@@ -86,7 +86,7 @@ const ReviewManagementSection: React.FC<ReviewManagementSectionProps> = ({
   const [hoveredCell, setHoveredCell] = useState<{ rowId: string; column: string } | null>(null)
   const [showCompletedOnly, setShowCompletedOnly] = useState<boolean>(false) // 진행중 영역에서 서평완료만 필터링
   const [showInProgress, setShowInProgress] = useState<boolean>(true) // 진행중 섹션 표시 여부 (기본: 열림)
-  const [showCompleted, setShowCompleted] = useState<boolean>(false) // 서평완료 섹션 표시 여부 (기본: 접힘)
+  const [showCompleted, setShowCompleted] = useState<boolean>(true) // 서평완료 섹션 표시 여부 (기본: 열림 - 모든 데이터 표시)
 
   // 처리상태별 색상
   const getStatusColor = (status: string): string => {

@@ -100,13 +100,6 @@ const MobileHomePage: React.FC<MobileHomePageProps> = ({
     }
   }
 
-  // HTML 태그 제거 함수
-  const stripHtmlTags = (html: string | undefined): string => {
-    if (!html) return ''
-    // HTML 태그를 정규식으로 제거
-    return html.replace(/<[^>]*>/g, '').trim()
-  }
-
   // 도서 섹션 스크롤 가능 여부 확인 함수
   const checkScrollable = (container: HTMLDivElement | null, setState: (state: { canScrollLeft: boolean, canScrollRight: boolean }) => void) => {
     if (!container) return
@@ -351,9 +344,10 @@ const MobileHomePage: React.FC<MobileHomePageProps> = ({
                       <div className="mobile-placeholder-cover">책 이미지</div>
                     )}
                     <div className="mobile-book-overlay">
+                      <div className="mobile-book-author">{book.author}</div>
                       <div className="mobile-book-info">
-                        <h3 className="mobile-book-title">{stripHtmlTags(book.title)}</h3>
-                        <div className="mobile-book-author">{stripHtmlTags(book.author)}</div>
+                        <h3 className="mobile-book-title">{book.title}</h3>
+                        <p className="mobile-book-subtitle">{book.description ? book.description.substring(0, 30) + '...' : '부제'}</p>
                       </div>
                     </div>
                   </div>
@@ -405,9 +399,10 @@ const MobileHomePage: React.FC<MobileHomePageProps> = ({
                       <div className="mobile-placeholder-cover">책 이미지</div>
                     )}
                     <div className="mobile-book-overlay">
+                      <div className="mobile-book-author">{book.author}</div>
                       <div className="mobile-book-info">
-                        <h3 className="mobile-book-title">{stripHtmlTags(book.title)}</h3>
-                        <div className="mobile-book-author">{stripHtmlTags(book.author)}</div>
+                        <h3 className="mobile-book-title">{book.title}</h3>
+                        <p className="mobile-book-subtitle">{book.description ? book.description.substring(0, 30) + '...' : '부제'}</p>
                       </div>
                     </div>
                   </div>
@@ -553,9 +548,10 @@ const MobileHomePage: React.FC<MobileHomePageProps> = ({
                       <div className="mobile-placeholder-cover">책 이미지</div>
                     )}
                     <div className="mobile-book-overlay">
+                      <div className="mobile-book-author">{book.author}</div>
                       <div className="mobile-book-info">
-                        <h3 className="mobile-book-title">{stripHtmlTags(book.title)}</h3>
-                        <div className="mobile-book-author">{stripHtmlTags(book.author)}</div>
+                        <h3 className="mobile-book-title">{book.title}</h3>
+                        <p className="mobile-book-subtitle">{book.description ? book.description.substring(0, 30) + '...' : '부제'}</p>
                       </div>
                     </div>
                   </div>

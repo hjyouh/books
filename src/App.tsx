@@ -10,6 +10,7 @@ import WebUserPage from './pages/WebUserPage'
 import MobileUserPage from './pages/MobileUserPage'
 import WebReviewManagementPage from './pages/WebReviewManagementPage'
 import MobileReviewManagementPage from './pages/MobileReviewManagementPage'
+import WebReviewWritePage from './pages/WebReviewWritePage'
 import WebBookDetailPage from './pages/WebBookDetailPage'
 import MobileBookDetailPage from './pages/MobileBookDetailPage'
 import SimpleLoginModal from './components/SimpleLoginModal'
@@ -513,6 +514,7 @@ function App() {
         <Route path="/admin" element={<AdminPage />} />
         <Route path="/user" element={<UserPage />} />
         <Route path="/reviews" element={<ReviewManagementPage />} />
+        <Route path="/review/write/:applicationId" element={<WebReviewWritePage />} />
       </Routes>
       
       {/* 모바일 로그인 모달 */}

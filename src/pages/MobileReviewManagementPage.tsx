@@ -300,9 +300,8 @@ const MobileReviewManagementPage: React.FC = () => {
 
   const handleReviewConfirm = () => {
     if (selectedApplication) {
-      // 서평 작성 페이지로 이동하거나 서평 작성 로직 실행
-      const message = `"${selectedApplication.bookTitle}" 서평 작성이 필요합니다. 준비 중인 서평 작성 페이지로 이동해주세요.`;
-      alert(message);
+      // 서평 작성 페이지로 이동
+      navigate(`/review/write/${selectedApplication.id}`);
       setShowReviewModal(false);
       setSelectedApplication(null);
       setBookData(null);

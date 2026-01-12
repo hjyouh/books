@@ -690,9 +690,9 @@ body.mobile-view-active .main-header {
 }
 
 .section-header h2 {
-  font-size: 14px;
+  font-size: 28px;
   font-weight: 700;
-  color: #ff9900;
+  color: #1f2937;
   margin: 0;
 }
 
@@ -796,7 +796,7 @@ body.mobile-view-active .main-header {
 
 .books-container {
   display: flex;
-  gap: 30px;
+  gap: 20px;
   overflow-x: auto;
   scroll-behavior: smooth;
   padding: 5px 0; /* 패딩 축소: 10px → 5px */
@@ -811,16 +811,14 @@ body.mobile-view-active .main-header {
 .book-card {
   width: 270px;
   min-width: 270px;
-  padding: 15px 10px;
   background: white;
   border-radius: 12px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-  overflow: visible;
+  overflow: hidden;
   transition: transform 0.2s, box-shadow 0.2s;
   cursor: pointer;
-  position: relative;
-  isolation: isolate;
-  box-sizing: border-box;
+  position: relative; /* 각 카드가 독립적으로 위치하도록 */
+  isolation: isolate; /* 각 카드의 stacking context 분리 */
 }
 
 .book-card:hover {
@@ -830,14 +828,13 @@ body.mobile-view-active .main-header {
 
 .book-cover {
   width: 100%;
-  height: 330px;
+  height: 360px; /* 1.5배 증가: 240px → 360px */
   background: #f3f4f6;
   display: flex;
   align-items: center;
   justify-content: center;
   overflow: hidden;
-  position: relative;
-  border-radius: 8px;
+  position: relative; /* 텍스트 오버레이를 위한 position */
 }
 
 .book-cover img {
@@ -1298,14 +1295,19 @@ body.mobile-view-active .main-header {
   margin-left: 15px;
 }
 
-/* 모든 도서 섹션 컨테이너 간격 통일 */
-.mobile-viewport .mobile-book-section {
-  margin-bottom: 20px !important; /* 모든 섹션 간 동일한 패딩 적용 */
+/* 서평도서 섹션 */
+.mobile-viewport .mobile-book-section:first-of-type {
+  margin-bottom: 20px !important; /* 서평도서 카드와 출간도서 제목 사이 패딩 20 */
 }
 
-/* 마지막 섹션은 하단 마진 제거 (푸터와의 간격) */
+/* 출간도서 섹션 */
+.mobile-viewport .published-books-section {
+  margin-bottom: 20px !important; /* 출간도서 카드와 추천도서 제목 사이 패딩 20 */
+}
+
+/* 추천도서 섹션 */
 .mobile-viewport .mobile-book-section:last-of-type {
-  margin-bottom: 0 !important;
+  margin-bottom: 0 !important; /* 마지막 섹션은 하단 마진 없음 */
 }
 
 /* 각 섹션의 제목과 카드 사이 패딩 10 */
@@ -1330,8 +1332,8 @@ body.mobile-view-active .main-header {
 }
 
 .mobile-viewport .section-header h2 {
-  color: #ff9900 !important;
-  font-size: 14px !important;
+  color: #ffffff !important;
+  font-size: 18px !important;
   font-weight: 700 !important;
   margin: 0 !important;
   padding-bottom: 0 !important;
@@ -1484,18 +1486,17 @@ body.mobile-view-active .main-header {
   z-index: 2;
 }
 
-.mobile-book-info {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
 .mobile-book-author {
   font-size: 11px;
   color: rgba(255, 255, 255, 0.9);
   font-weight: 500;
   margin: 0;
-  margin-top: 2px;
+}
+
+.mobile-book-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 }
 
 .mobile-book-title {
@@ -1587,9 +1588,9 @@ body.mobile-view-active .main-header {
 }
 
 .mobile-viewport .section-header h2 {
-  font-size: 14px;
+  font-size: 20px;
   font-weight: 700;
-  color: #ff9900;
+  color: #ffffff;
   margin: 0;
 }
 
@@ -1848,7 +1849,7 @@ body.mobile-view-active .main-header {
   }
 
   .section-header h2 {
-    font-size: 14px;
+    font-size: 20px;
   }
 
   .more-link {

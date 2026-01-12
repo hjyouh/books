@@ -394,7 +394,7 @@ body.mobile-view-active.actual-mobile-device .mobile-book-detail-header {
 
 .mobile-book-title-header {
   flex: 1;
-  font-size: 16px;
+  font-size: 18px;
   font-weight: 700;
   color: #A1C5FF;
   margin: 0;
@@ -405,7 +405,7 @@ body.mobile-view-active.actual-mobile-device .mobile-book-detail-header {
   white-space: nowrap;
   line-height: 1.2;
   /* 영역에 맞춰 글씨 크기 조정 가능 */
-  font-size: clamp(14px, 4vw, 16px);
+  font-size: clamp(14px, 4vw, 18px);
 }
 
 .purchase-link-icon-button {
@@ -493,18 +493,18 @@ body.mobile-view-active.actual-mobile-device .mobile-book-detail-main {
 .mobile-info-label {
   color: rgba(255, 255, 255, 0.9);
   font-weight: 400;
-  font-size: 12px;
+  font-size: 11px;
   margin-right: 4px;
   min-width: 45px;
   flex-shrink: 0;
-  line-height: 18px;
-  height: 18px;
+  line-height: 16.5px;
+  height: 16.5px;
 }
 
 .mobile-info-value {
   color: #ffffff;
   font-weight: 700;
-  font-size: 13px !important;
+  font-size: 13px;
 }
 
 /* 도서 소개 섹션 */
@@ -513,7 +513,7 @@ body.mobile-view-active.actual-mobile-device .mobile-book-detail-main {
 }
 
 .mobile-book-description-title {
-  font-size: 16px;
+  font-size: 14px;
   font-weight: 700;
   color: #ffffff;
   margin: 0 0 12px 0;
@@ -521,13 +521,13 @@ body.mobile-view-active.actual-mobile-device .mobile-book-detail-main {
 }
 
 .mobile-book-description-content {
-  font-size: 14px !important;
+  font-size: 12px !important;
   line-height: 1.4;
   color: rgba(255, 255, 255, 0.9);
 }
 
 .mobile-book-description-content * {
-  font-size: 14px !important;
+  font-size: 12px !important;
   line-height: 1.4;
 }
 

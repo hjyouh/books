@@ -621,23 +621,55 @@ const NewSignupModal: React.FC<NewSignupModalProps> = ({ isOpen, onClose, onSucc
   };
 
   const isAllValidationsComplete = () => {
-    return (
-      formData.id.trim() !== '' &&
-      formData.password.trim() !== '' &&
-      formData.confirmPassword.trim() !== '' &&
-      formData.name.trim() !== '' &&
-      formData.nickname.trim() !== '' &&
-      formData.phone.trim() !== '' &&
-      formData.email.trim() !== '' &&
-      formData.address.trim() !== '' &&
-      isIdChecked &&
-      isEmailChecked &&
-      isNameChecked &&
-      isNicknameChecked &&
-      isPhoneVerified &&
-      isAddressConfirmed &&
-      Object.keys(errors).length === 0
-    );
+    const trimmedId = formData.id.trim();
+    const trimmedPassword = formData.password.trim();
+    const trimmedConfirmPassword = formData.confirmPassword.trim();
+    const trimmedPhone = formData.phone.trim();
+    const trimmedEmail = formData.email.trim();
+    
+    // ID 검증
+    if (!trimmedId || trimmedId.length < 6 || !isIdChecked) {
+      return false;
+    }
+    
+    // 비밀번호 검증
+    if (!trimmedPassword || trimmedPassword.length < 6) {
+      return false;
+    }
+    
+    // 비밀번호 확인 검증
+    if (!trimmedConfirmPassword || trimmedPassword !== trimmedConfirmPassword) {
+      return false;
+    }
+    
+    // 이름 검증
+    if (!formData.name.trim() || !isNameChecked) {
+      return false;
+    }
+    
+    // 닉네임 검증
+    if (!formData.nickname.trim() || !isNicknameChecked) {
+      return false;
+    }
+    
+    // 휴대폰 검증
+    const phoneRegex = /^010-\d{4}-\d{4}$/;
+    if (!trimmedPhone || !phoneRegex.test(trimmedPhone) || !isPhoneVerified) {
+      return false;
+    }
+    
+    // 이메일 검증
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!trimmedEmail || !emailRegex.test(trimmedEmail) || !isEmailChecked) {
+      return false;
+    }
+    
+    // 주소 검증
+    if (!formData.address.trim() || !isAddressConfirmed) {
+      return false;
+    }
+    
+    return true;
   };
 
   if (!isOpen) return null;

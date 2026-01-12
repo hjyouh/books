@@ -504,7 +504,7 @@ body.mobile-view-active.actual-mobile-device .mobile-book-detail-main {
 .mobile-info-value {
   color: #ffffff;
   font-weight: 700;
-  font-size: 13px !important;
+  font-size: 13px;
 }
 
 /* 도서 소개 섹션 */
